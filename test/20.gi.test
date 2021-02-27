@@ -1,0 +1,66 @@
+package require tcltest 2
+
+::tcltest::loadTestedCommands
+
+package require gi 1.0 
+
+::tcltest::test icons.created {
+} -output {} -body {
+  llength [image names]
+} -result {35}
+
+::tcltest::test setdictionary {
+} -output {} -body {
+  dict set ::gi::Geometry -ipadx Frame 12 
+  dict set ::gi::Geometry -ipady Frame 12
+  dict set ::gi::Geometry -column .g 1
+  dict set ::gi::Geometry -row    .g 0
+  dict set ::gi::Geometry cols  -uniform  f   panes
+  dict set ::gi::Geometry cols  -uniform  g   panes
+  dict set ::gi::Geometry cols  -weight   .f    1
+  dict set ::gi::Geometry cols  -minsize  .g    2
+  dict set ::gi::Geometry rows  -minsize  .f    40
+  dict set ::gi::Geometry rows  -minsize  .g    40
+  
+  lappend ::gi::OPTIONS *f.padX 6
+  lappend ::gi::OPTIONS *f.padY 16
+  lappend ::gi::OPTIONS *Frame.background red
+  lappend ::gi::OPTIONS *g.background blue
+  lappend ::gi::OPTIONS *g.padX 12
+  
+  foreach {pattern value} $::gi::OPTIONS {
+    option add $pattern $value
+  }
+
+  grid [frame .f] [frame .g]
+
+}
+
+::tcltest::test list {
+} -body {
+  update
+  list \
+    [.f cget -padx] \
+    [.f cget -pady] \
+    [.f cget -background] \
+    [.g cget -padx] \
+    [.g cget -pady] \
+    [.g cget -background] \
+    [dict get [grid info .f] -sticky] \
+    [dict get [grid info .f] -ipadx] \
+    [dict get [grid info .f] -ipady] \
+    [dict get [grid info .g] -sticky] \
+    [dict get [grid info .g] -ipadx] \
+    [dict get [grid info .g] -ipady] 
+} -result {6 16 red 12 0 blue nesw 12 12 nesw 12 12}
+
+::tcltest::test icons.display {
+} -output {} -body {
+  pack [button .f.update]
+  list [.f.update cget -image] [.f.update cget -text]
+} -result [list $::gi::ICO(update) $::gi::LBL(update)]
+
+
+::tcltest::wait_until_  0
+::tcltest::cleanupTests
+

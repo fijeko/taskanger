@@ -1,0 +1,7 @@
+.fslckout
+taskanger.base
+taskanger.base
+freewrap/**
+notes/**
+wrap/**
+!wrap/wrapper.tcl

@@ -1,0 +1,442 @@
+package require tcltest 2
+
+::tcltest::loadTestedCommands
+
+package require writter 1.0
+
+
+::tcltest::test frames {} -body {
+  wm geometry . +1300+150
+  pack [frame .pop1]
+  bind .pop1 <<SaveArticle>> {puts -nonewline "%W [llength %d]"} 
+}
+
+::tcltest::test draw.1 {
+} -output {} -body {
+  ::writter::draw .pop1.writ ::errvariable
+  #~ ::writter::configure .pop1.writ
+  update
+  list  \
+    [winfo manager .pop1.writ] \
+    [winfo class .pop1.writ.tool] \
+    [winfo class .pop1.writ.linktool] \
+    [winfo class .pop1.writ.linktool.address] \
+    [winfo manager .pop1.writ.linktool.ok] \
+    [winfo manager .pop1.writ.linktool.escape] \
+    [winfo manager .pop1.writ.linktool.title] \
+    [winfo class .pop1.writ.txt] \
+    [lindex [bindtags .pop1.writ.txt] 0] \
+    [set ::writter::Status(.pop1.writ.links)] \
+    [set ::writter::Status(.pop1.writ.url)] \
+    [set ::writter::Status(.pop1.writ.lastlink)] \
+    [set ::writter::Status(.pop1.writ.errvar)]
+} -result {{} Frame Frame Entry {} {} {} Text Writter {} {} 0 ::errvariable}
+
+::tcltest::test packWidget.1 {
+} -output {} -body {
+  ::writter::packWidget .pop1.writ
+  winfo manager .pop1.writ
+} -result pack
+
+::tcltest::test packWidget.2 {
+} -output {.pop1 4} -body {
+  focus .pop1.writ.txt
+  update
+  ::writter::packWidget .pop1.writ
+  winfo manager .pop1.writ
+} -result {}
+
+::tcltest::test packWidget.3 {
+} -output {} -body {
+  ::writter::packWidget .pop1.writ
+  winfo manager .pop1.writ
+} -result pack
+
+
+::tcltest::test insert.1 {
+} -output {} -body {
+  ::writter::insert .pop1.writ {
+    {some article text} 
+    {MARKER {} UNDERL {}}
+    {insert 1.6}
+    {link_1 1.13 {debian page} {lo lo lo} link_2 1.8 {} {}}
+  } 
+  list \
+    [set ::writter::Status(.pop1.writ.lastlink)] \
+    [set ::writter::Status(.pop1.writ.links)] \
+    [set ::writter::Status(.pop1.writ.url)] \
+    [.pop1.writ.txt.link_1.wtitle cget -text] \
+    [.pop1.writ.txt.link_2.wtitle cget -text] \
+    [.pop1.writ.txt tag ranges MARKER] \
+    [.pop1.writ.txt tag ranges UNDERL]
+} -result {2 {link_1 {lo lo lo} link_2 {}} {} {debian page} {} {} {}}
+
+::tcltest::test getarticle.1 {
+} -output {} -body {
+  ::writter::getarticle .pop1.writ
+} -result {{some article text} {MARKER {} UNDERL {}} {insert 1.6} {link_1 1.14 {debian page} lo link_2 1.8 {} {}}}
+
+::tcltest::test insert.2 {
+} -output {} -body {
+  ::writter::insert .pop1.writ {
+    {some article  text
+      other line} 
+    {MARKER {1.7 1.9} UNDERL {1.0 1.6}}
+    {insert 1.6}
+    {link_1 1.13 {debian page} https://debian.org link_2 1.19 {tcltk page} https://www.tcl.tk/}
+  } 
+  
+  list \
+    [set ::writter::Status(.pop1.writ.lastlink)] \
+    [set ::writter::Status(.pop1.writ.links)] \
+    [set ::writter::Status(.pop1.writ.url)] \
+    [.pop1.writ.txt index .pop1.writ.txt.link_1] \
+    [.pop1.writ.txt index .pop1.writ.txt.link_2] \
+    [.pop1.writ.txt.link_1.wtitle cget -text] \
+    [.pop1.writ.txt.link_2.wtitle cget -text]
+} -result {2 {link_1 https://debian.org link_2 https://www.tcl.tk/} {} 1.13 1.19 {debian page} {tcltk page}}
+
+::tcltest::test getarticle.2 {
+} -output {} -body {
+  ::writter::getarticle .pop1.writ
+} -result {{some article  text
+      other line} {MARKER {1.7 1.9} UNDERL {1.0 1.6}} {insert 1.6} {link_1 1.13 {debian page} https://debian.org link_2 1.19 {tcltk page} https://www.tcl.tk/}}
+
+
+::tcltest::test button.Save {
+} -body {
+  .pop1.writ.tool.save cget -command
+} -result {::writter::Save .pop1.writ.txt}
+::tcltest::test bind.Save {
+} -body {
+  list \
+    [bind Writter <Control-S>] \
+    [bind Writter <Control-s>] \
+    [bind Writter <FocusOut> ]
+} -result {{::namespace inscope ::writter {Save %W}} {::namespace inscope ::writter {Save %W}} {::namespace inscope ::writter {Save %W}}}
+
+::tcltest::test Save {
+} -output {.pop1 4} -body {
+  update
+  ::writter::Save .pop1.writ.txt
+}
+
+
+::tcltest::test button.Mark {
+} -body {
+  .pop1.writ.tool.mark cget -command
+} -result {::writter::Mark .pop1.writ.txt}
+::tcltest::test bind.Mark {
+} -body {
+  list \
+    [bind Writter <Alt-m>] \
+    [bind Writter <Alt-M>]
+} -result {{::namespace inscope ::writter {Mark [winfo parent %W]}} {::namespace inscope ::writter {Mark [winfo parent %W]}}}
+
+::tcltest::test Mark {
+} -output {} -body {
+  .pop1.writ.txt tag add sel 2.7 2.11
+  ::writter::Mark .pop1.writ.txt
+  .pop1.writ.txt tag ranges MARKER
+} -result {1.7 1.9 2.7 2.11}
+
+
+::tcltest::test button.Undrl {
+} -body {
+  .pop1.writ.tool.undr cget -command
+} -result {::writter::Undrl .pop1.writ.txt}
+::tcltest::test bind.Undrl {
+} -body {
+  list \
+    [bind Writter <Alt-u>] \
+    [bind Writter <Alt-U>]
+} -result {{::namespace inscope ::writter {Undrl [winfo parent %W]}} {::namespace inscope ::writter {Undrl [winfo parent %W]}}}
+
+::tcltest::test Undrl {
+} -output {} -body {
+  .pop1.writ.txt tag add sel 2.6 2.11
+  ::writter::Undrl .pop1.writ.txt
+  .pop1.writ.txt tag ranges UNDERL
+} -result {1.0 1.6 2.6 2.11}
+
+
+::tcltest::test button.None {
+} -body {
+  .pop1.writ.tool.none cget -command
+} -result {::writter::None .pop1.writ.txt}
+::tcltest::test bind.None {
+} -body {
+  list \
+    [bind Writter <Alt-n>] \
+    [bind Writter <Alt-N>]
+} -result {{::namespace inscope ::writter {None [winfo parent %W]}} {::namespace inscope ::writter {None [winfo parent %W]}}}
+
+::tcltest::test None.1 {
+} -output {} -body {
+  .pop1.writ.txt tag add sel 2.7 2.10
+  ::writter::None .pop1.writ.txt
+  list \
+    [.pop1.writ.txt tag ranges UNDERL] \
+    [.pop1.writ.txt tag ranges MARKER]
+} -result {{1.0 1.6 2.6 2.7 2.10 2.11} {1.7 1.9 2.10 2.11}}
+
+::tcltest::test None.2 {
+  not clear LINKER tag
+} -output {} -body {
+  .pop1.writ.txt tag add UNDERL 1.13 1.17
+  .pop1.writ.txt tag add sel 1.13 1.17
+  ::writter::None .pop1.writ.txt
+  list \
+    [.pop1.writ.txt tag ranges UNDERL] \
+    [.pop1.writ.txt tag ranges MARKER]
+} -result {{1.0 1.6 2.6 2.7 2.10 2.11} {1.7 1.9 2.10 2.11}}
+
+
+::tcltest::test button.Link {
+} -body {
+  .pop1.writ.tool.link cget -command
+} -result {::writter::Link .pop1.writ}
+::tcltest::test bind.Link {
+} -body {
+  list \
+    [bind Writter <Alt-l>] \
+    [bind Writter <Alt-L>]
+} -result {{::namespace inscope ::writter {Link [winfo parent %W]}} {::namespace inscope ::writter {Link [winfo parent %W]}}}
+::tcltest::test bind.EditLinklabel {
+} -output {} -body {
+  list \
+    [bind Linklabel <Button-1>] \
+    [bind Linklabel <Button-3>]
+} -result {{::namespace inscope ::writter {EditLinklabel %W}} {::namespace inscope ::writter {EditLinklabel %W}}}
+::tcltest::test button.EscapeLink {
+} -body {
+  .pop1.writ.linktool.escape cget -command
+} -result {::writter::EscapeLink .pop1.writ}
+::tcltest::test button.OkLink {
+} -body {
+  .pop1.writ.linktool.ok cget -command
+} -result {::writter::OkLink .pop1.writ}
+
+::tcltest::test Link.1 {
+  when there is not selection in text
+} -output {.pop1 4} -body {
+  .pop1.writ.txt tag remove sel 1.0 end
+  .pop1.writ.txt mark set insert 1.6
+  ::writter::Link .pop1.writ
+  list \
+    [.pop1.writ.txt tag ranges sel] \
+    [.pop1.writ.txt index insert] \
+    [.pop1.writ.linktool.title get] \
+    [.pop1.writ.linktool.address get] \
+    [.pop1.writ.linktool.ok cget -command]
+} -result {{} 1.6 {} {} {::writter::OkLink .pop1.writ new}}
+
+::tcltest::test EscapeLink.1 {
+  disable address Entry and return focus to Text
+} -output {} -body {
+  ::writter::EscapeLink .pop1.writ
+  update
+  list \
+    [focus -lastfor .] \
+    [.pop1.writ.linktool.address cget -state] \
+    [winfo manager .pop1.writ.linktool.ok] \
+    [winfo manager .pop1.writ.linktool.escape] \
+    [winfo manager .pop1.writ.linktool.title] \
+    [grab status .pop1.writ.linktool] \
+    [.pop1.writ.linktool.address get] \
+    [.pop1.writ.linktool.title get] \
+    [.pop1.writ.txt tag ranges sel] \
+    [.pop1.writ.linktool.address cget -textvariable] \
+    [.pop1.writ.linktool.ok cget -command]
+} -result {.pop1.writ.txt disabled {} {} {} none {} {} {} ::writter::Status(.pop1.writ.url) {::writter::OkLink .pop1.writ}}
+
+::tcltest::test Link.2 {
+  when there is selection in text
+} -output {.pop1 4} -body {
+  .pop1.writ.txt tag add sel 1.0 1.12
+  .pop1.writ.txt mark set insert 1.12
+  ::writter::Link .pop1.writ
+  list \
+    [.pop1.writ.txt tag ranges sel] \
+    [.pop1.writ.txt index insert] \
+    [.pop1.writ.linktool.title get] \
+    [.pop1.writ.linktool.address get] \
+    [.pop1.writ.linktool.ok cget -command]
+} -result {{1.0 1.12} 1.12 {some article} {} {::writter::OkLink .pop1.writ new}}
+
+::tcltest::test EscapeLink.2 {
+  disable address Entry and return focus to Text
+} -output {} -body {
+  ::writter::EscapeLink .pop1.writ
+  update
+  list \
+    [focus -lastfor .] \
+    [.pop1.writ.linktool.address cget -state] \
+    [winfo manager .pop1.writ.linktool.ok] \
+    [winfo manager .pop1.writ.linktool.escape] \
+    [winfo manager .pop1.writ.linktool.title] \
+    [grab status .pop1.writ.linktool] \
+    [.pop1.writ.linktool.address get] \
+    [.pop1.writ.linktool.title get] \
+    [.pop1.writ.txt tag ranges sel] \
+    [.pop1.writ.linktool.ok cget -command]
+} -result {.pop1.writ.txt disabled {} {} {} none {} {} {} {::writter::OkLink .pop1.writ}}
+
+::tcltest::test EditLinklabel {
+} -output {.pop1 4} -body {
+  ::writter::EditLinklabel .pop1.writ.txt.link_1.wtitle
+  list \
+    [focus -lastfor .] \
+    [grab status .pop1.writ.linktool] \
+    [.pop1.writ.linktool.address cget -textvariable] \
+    [.pop1.writ.linktool.title get] \
+    [.pop1.writ.linktool.address get] \
+    [.pop1.writ.linktool.ok cget -command]
+} -result {.pop1.writ.linktool.title local {} {debian page} https://debian.org {::writter::OkLink .pop1.writ link_1}}
+
+::tcltest::test OkLink.1 {
+  from embeded link label in text
+} -output {} -body {
+  .pop1.writ.linktool.address insert end /distrib/netinst
+  .pop1.writ.linktool.title insert end { network instalation}
+  ::writter::OkLink .pop1.writ link_1
+  list \
+    [focus -lastfor .] \
+    [.pop1.writ.linktool.address cget -state] \
+    [winfo manager .pop1.writ.linktool.ok] \
+    [winfo manager .pop1.writ.linktool.escape] \
+    [winfo manager .pop1.writ.linktool.title] \
+    [grab status .pop1.writ.linktool] \
+    [.pop1.writ.linktool.address get] \
+    [.pop1.writ.linktool.title get] \
+    [.pop1.writ.linktool.ok cget -command] \
+    [.pop1.writ.txt.link_1.wtitle cget -text] \
+    [set ::writter::Status(.pop1.writ.links)] \
+    [set ::writter::Status(.pop1.writ.lastlink)]
+} -result {.pop1.writ.txt disabled {} {} {} none {} {} {::writter::OkLink .pop1.writ} {debian page network instalation} {link_1 https://debian.org/distrib/netinst link_2 https://www.tcl.tk/} 2}
+
+::tcltest::test OkLink.2 {
+  with selection
+} -output {.pop1 4} -body {
+  .pop1.writ.txt tag remove sel 1.0 end
+  .pop1.writ.txt tag add sel 2.0 end-1c
+  .pop1.writ.txt mark set insert end-1c
+  ::writter::Link .pop1.writ
+  update
+  ::writter::OkLink .pop1.writ new
+  list \
+    [focus -lastfor .] \
+    [grab status .pop1.writ.linktool] \
+    [winfo manager .pop1.writ.linktool.ok] \
+    [winfo manager .pop1.writ.linktool.escape] \
+    [winfo manager .pop1.writ.linktool.title] \
+    [.pop1.writ.linktool.address cget -state] \
+    [.pop1.writ.linktool.address get] \
+    [.pop1.writ.linktool.title get] \
+    [.pop1.writ.linktool.ok cget -command] \
+    [.pop1.writ.txt index .pop1.writ.txt.link_3] \
+    [.pop1.writ.txt.link_3.wtitle cget -text] \
+    [set ::writter::Status(.pop1.writ.links)] \
+    [set ::writter::Status(.pop1.writ.lastlink)]
+} -result {.pop1.writ.txt none {} {} {} disabled {} {} {::writter::OkLink .pop1.writ} 2.0 {      other line} {link_1 https://debian.org/distrib/netinst link_2 https://www.tcl.tk/ link_3 {}} 3}
+
+::tcltest::test OkLink.3 {
+  without selection
+} -output {.pop1 4} -body {
+  .pop1.writ.txt mark set insert 1.0
+  ::writter::Link .pop1.writ
+  .pop1.writ.linktool.address insert end {https://fossil-scm.org}
+  .pop1.writ.linktool.title insert end {FOSSIL versioning system}
+  update
+  ::writter::OkLink .pop1.writ new
+  list \
+    [.pop1.writ.linktool.ok cget -command] \
+    [.pop1.writ.txt index .pop1.writ.txt.link_4] \
+    [.pop1.writ.txt.link_4.wtitle cget -text] \
+    [set ::writter::Status(.pop1.writ.links)] \
+    [set ::writter::Status(.pop1.writ.lastlink)] \
+    [::writter::getarticle .pop1.writ]
+}  -result {{::writter::OkLink .pop1.writ} 1.0 {FOSSIL versioning system} {link_1 https://debian.org/distrib/netinst link_2 https://www.tcl.tk/ link_3 {} link_4 https://fossil-scm.org} 4 {{some article  text
+} {MARKER {1.8 1.10} UNDERL {1.1 1.7}} {insert 1.1} {link_1 1.14 {debian page network instalation} https://debian.org/distrib/netinst link_2 1.20 {tcltk page} https://www.tcl.tk/ link_3 2.0 {      other line} {} link_4 1.0 {FOSSIL versioning system} https://fossil-scm.org}}}
+
+
+::tcltest::test bind.Linkframe {
+} -output {} -body {
+  list \
+    [bind Linkframe <Enter>] \
+    [bind Linkframe <Leave>]
+} -result {{::namespace inscope ::writter {VisitLinkFrame %W Enter}} {::namespace inscope ::writter {VisitLinkFrame %W Leave}}}
+
+::tcltest::test VisitLinkFrame.1 {
+} -output {} -body {
+  ::writter::VisitLinkFrame .pop1.writ.txt.link_2 Enter
+  list \
+    [set ::writter::Status(.pop1.writ.url)] \
+    [.pop1.writ.linktool.address get] \
+    [.pop1.writ.linktool.address cget -textvariable]
+} -result {https://www.tcl.tk/ https://www.tcl.tk/ ::writter::Status(.pop1.writ.url)}
+
+::tcltest::test VisitLinkFrame.2 {
+} -output {} -body {
+  ::writter::VisitLinkFrame .pop1.writ.txt.link_2 Leave
+  list \
+    [set ::writter::Status(.pop1.writ.url)] \
+    [.pop1.writ.linktool.address get] \
+    [.pop1.writ.linktool.address cget -textvariable]
+} -result {{} {} ::writter::Status(.pop1.writ.url)}
+
+
+::tcltest::test button.GoLink {
+} -body {
+  list \
+    [.pop1.writ.txt.link_1.go cget -command] \
+    [.pop1.writ.txt.link_2.go cget -command] \
+    [.pop1.writ.txt.link_3.go cget -command] \
+    [.pop1.writ.txt.link_4.go cget -command]
+} -result {{::writter::GoLink .pop1.writ https://debian.org/distrib/netinst} {::writter::GoLink .pop1.writ https://www.tcl.tk/} {::writter::GoLink .pop1.writ } {::writter::GoLink .pop1.writ https://fossil-scm.org}}
+
+::tcltest::test GoLink {
+  go button in embed window open address in browser
+} -output {} -body {
+  .pop1.writ.txt.link_3.go invoke
+  
+  set $::writter::Status(.pop1.writ.errvar)
+} -result {poveznica je nepravilna ili ne postoji}
+
+
+
+::tcltest::test DeleteEvent {
+  test what is getarticle when some links are deleted
+} -output {} -body {
+  .pop1.writ.txt delete 1.0 1.13
+  ::writter::getarticle .pop1.writ
+} -result {{  text
+} {MARKER {} UNDERL {}} {insert 1.0} {link_1 1.1 {debian page network instalation} https://debian.org/distrib/netinst link_2 1.7 {tcltk page} https://www.tcl.tk/ link_3 2.0 {      other line} {}}}
+
+
+::tcltest::test EnableLink.event {
+} -output {.pop1 4} -body {
+  event generate .pop1.writ.txt.link_2.wtitle <Button-1>
+  #~ update
+  #~ grab set .pop1.writ.link
+} -result {}
+
+::tcltest::test OkLink.4 {
+  with space in address
+} -output {} -body {
+  .pop1.writ.linktool.address insert end { some dummy bad stuff}
+  update
+  ::writter::OkLink .pop1.writ link_2
+  list \
+    [set ::writter::Status(.pop1.writ.links)] \
+    [set ::writter::Status(.pop1.writ.lastlink)]
+}  -result {{link_1 https://debian.org/distrib/netinst link_2 https://www.tcl.tk/ link_3 {} link_4 https://fossil-scm.org} 4}
+
+
+
+
+
+
+
+::tcltest::wait_until_ 0
+::tcltest::cleanupTests

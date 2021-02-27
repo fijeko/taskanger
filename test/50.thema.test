@@ -1,0 +1,280 @@
+package require tcltest 2
+
+::tcltest::loadTestedCommands
+
+source [file join $::TSKNGR_APPDIR thema.tcl]
+
+
+::tcltest::test draw {
+  'static' frames
+} -output {} -body {
+  wm geometry . +1000+50
+  dict set ::gi::WinMng minsize {800 800}
+  grid [frame .3]
+  grid [frame .31] 
+  pack [frame .3.0] [frame .3.0.scroll]
+  
+  ::thema::draw .31 .3.0.scroll
+  .31.insert cget -command
+} -result {::namespace inscope ::thema InsertMain}
+
+::tcltest::test load {
+  data from database and draw items
+} -output {} -setup {
+  ::domain::Connect ":memory:"
+  ::domain::insertThema 1 {}
+  ::domain::insertThema 2 {}
+  ::domain::insertThema 3 {}
+  ::domain::insertThema 4 {}
+  ::domain::insertThema 5 {}
+  ::domain::updateThema 1 thema1
+  ::domain::updateThema 2 thema2
+  ::domain::updateThema 3 thema3
+  ::domain::updateThema 4 thema4
+  ::domain::updateThema 5 thema5
+} -body {
+  ::thema::load [::domain::ThemaLista]
+  list \
+    [winfo exists .3.0.scroll.lst.1] \
+    [winfo exists .3.0.scroll.lst.2] \
+    [winfo exists .3.0.scroll.lst.3] \
+    [winfo exists .3.0.scroll.lst.4] \
+    [winfo exists .3.0.scroll.lst.5]
+} -result {1 1 1 1 1}
+
+
+::tcltest::test Walk {
+  list of all windows for tab and shifttab
+} -cleanup {
+  pack forget $::thema::Pane.lst.1.tool
+} -output {} -body {
+  pack $::thema::Pane.lst.1.tool
+  ::thema::Walk
+} -result [list $::thema::Pane.lst.1.tool.buttons.close $::thema::Pane.lst.1.tool.buttons.escape $::thema::Pane.lst.1.tool.buttons.update $::thema::Pane.lst.1.tool.buttons.delete $::thema::Pane.lst.1.tool.buttons.moveup $::thema::Pane.lst.1.tool.buttons.movedn $::thema::Pane.lst.1.tool.buttons.insert $::thema::Pane.lst.1.tool.buttons.article $::thema::Pane.lst.1.entry $::thema::Pane.lst.2.entry $::thema::Pane.lst.3.entry $::thema::Pane.lst.4.entry $::thema::Pane.lst.5.entry $::thema::PaneIns.insert]
+
+
+::tcltest::test Save.event {
+  from wentry ctrl-s or enter
+} -output {} -body {
+  bind Thema <<Save>>
+} -result {::namespace inscope ::thema {Save %W %d}}
+
+::tcltest::test Save {
+  update value in database
+} -output {} -cleanup {
+  ::thema::Save $::thema::Pane.lst.1 thema1
+} -body {
+  focus $::thema::Pane.lst.1.entry
+  ::thema::Save $::thema::Pane.lst.1 tmptxt
+  list \
+    [focus -lastfor .] \
+    [SQLCMD eval {SELECT thema FROM theme WHERE rowid=1}]
+} -result {. tmptxt}
+
+
+::tcltest::test SaveArticle.event {
+  from wentry ctrl-s or enter
+} -output {} -body {
+  bind Thema <<SaveArticle>>
+} -result {::namespace inscope ::thema {SaveArticle %W %d}}
+
+::tcltest::test SaveArticle {
+  when SaveArticle event is called on wdg
+} -output {} -body {
+  ::thema::SaveArticle .3.0.lst.1 {
+      {some article  text} 
+      {MARKER {1.7 1.9} UNDERL {1.0 1.6}} 
+      {insert 1.6} 
+      {link_1 1.13 debian https://debian.org}
+    }
+  SQLCMD eval {SELECT article,tags,marks,wins FROM theme WHERE rowid=1}
+} -result {{some article  text} {MARKER {1.7 1.9} UNDERL {1.0 1.6}} {insert 1.6} {link_1 1.13 debian https://debian.org}}
+
+
+::tcltest::test Insert.button {
+  main insert button 
+} -output {} -body {
+  .31.insert cget -command
+} -result {::namespace inscope ::thema InsertMain}
+
+::tcltest::test InsertMain {
+  inert new thema
+} -output {} -body {
+  focus .
+  update
+  ::thema::InsertMain
+  update
+  $::thema::Pane.lst.6.entry insert 0 thema6
+  list \
+    [focus -lastfor .] \
+    [SQLCMD eval {SELECT rowid,rang FROM theme WHERE rowid=6}]
+} -result [list $::thema::Pane.lst.6.entry {6 6}]
+
+
+::tcltest::test bind.insert {
+  list [bind Wentry <Insert>] [bind Entry <Insert>]
+}
+::tcltest::test Insert.button {
+  insert button in entry tools
+} -body {
+  $::thema::Pane.lst.5.tool.buttons.insert cget -command
+} -result [list event generate $::thema::Pane.lst.5 <<Insert>>]
+::tcltest::test Insert.event {
+  from wentry ctrl Ins
+} -body {
+  bind Thema <<Insert>>
+} -result {::namespace inscope ::thema {Insert %W}}
+
+::tcltest::test Insert.1 {
+  insert wentry after wdg
+} -output {} -body {
+  ::thema::Insert $::thema::Pane.lst.3
+  update
+  $::thema::Pane.lst.7.entry insert 0 thema7
+  list \
+    [SQLCMD eval {SELECT rang,rowid FROM theme ORDER BY rang}] \
+    [pack slaves $::thema::Pane.lst] \
+    [focus -lastfor .]
+} -result [list {1 1 2 2 3 3 4 7 5 4 6 5 7 6} [list $::thema::Pane.lst.1 $::thema::Pane.lst.2 $::thema::Pane.lst.3 $::thema::Pane.lst.7 $::thema::Pane.lst.4 $::thema::Pane.lst.5 $::thema::Pane.lst.6] $::thema::Pane.lst.7.entry]
+
+
+::tcltest::test bind.shiftdown {} -body {
+  list [bind Wentry <Shift-Key-Down>] [bind Entry <Shift-Key-Down>]
+} -result {{ event generate [winfo parent %W] <<MoveDn>> } {}}
+::tcltest::test MoveDn.event {
+  events on Thema
+} -output {} -body {
+  bind Thema <<MoveDn>>
+} -result {::namespace inscope ::thema {MoveDn %W}}
+::tcltest::test Movedn.button {} -output {} -body {
+  $::thema::Pane.lst.4.tool.buttons.movedn cget -command
+} -result [list event generate $::thema::Pane.lst.4 <<MoveDn>>]
+
+::tcltest::test MoveDn.1 {
+  move item one place down in rang
+} -output {} -body {
+  focus $::thema::Pane.lst.4.entry
+  update
+  ::thema::MoveDn $::thema::Pane.lst.4
+  update
+  list \
+    [focus -lastfor .] \
+    [SQLCMD eval {SELECT rang,rowid FROM theme ORDER BY rang}]
+} -result [list $::thema::Pane.lst.4.entry {1 1 2 2 3 3 4 7 5 5 6 4 7 6}]
+
+::tcltest::test MoveDn.2 {
+  move item one place down in rang
+} -output {} -body {
+  focus $::thema::Pane.lst.6.entry
+  update
+  ::thema::MoveDn $::thema::Pane.lst.6
+  update
+  list \
+    [focus -lastfor .] \
+    [SQLCMD eval {SELECT rang,rowid FROM theme ORDER BY rang}]
+} -result [list $::thema::Pane.lst.6.entry {1 1 2 2 3 3 4 7 5 5 6 4 7 6}]
+
+
+::tcltest::test bind.shiftup {} -body {
+  list [bind Wentry <Shift-Key-Up>] [bind Entry <Shift-Key-Up>]
+} -result {{ event generate [winfo parent %W] <<MoveUp>> } {}}
+::tcltest::test MoveUp.event {
+  events on Thema
+} -body {
+  bind Thema <<MoveUp>>
+} -result {::namespace inscope ::thema {MoveUp %W}}
+::tcltest::test MoveUp.button {} -output {} -body {
+  $::thema::Pane.lst.4.tool.buttons.moveup cget -command
+} -result [list event generate $::thema::Pane.lst.4 <<MoveUp>>]
+
+::tcltest::test MoveUp.1 {
+  move item one place down in rang
+} -output {} -body {
+  focus $::thema::Pane.lst.4.entry
+  update
+  ::thema::MoveUp $::thema::Pane.lst.4
+  update
+  list \
+    [focus -lastfor .] \
+    [SQLCMD eval {SELECT rang,rowid FROM theme ORDER BY rang}]
+} -result [list $::thema::Pane.lst.4.entry {1 1 2 2 3 3 4 7 5 4 6 5 7 6}]
+
+::tcltest::test MoveUp.2 {
+  move item one place down in rang
+} -output {} -body {
+  focus $::thema::Pane.lst.1.entry
+  update
+  ::thema::MoveUp $::thema::Pane.lst.1
+  update
+  list \
+    [focus -lastfor .] \
+    [SQLCMD eval {SELECT rang,rowid FROM theme ORDER BY rang}]
+} -result [list $::thema::Pane.lst.1.entry {1 1 2 2 3 3 4 7 5 4 6 5 7 6}]
+
+
+::tcltest::test bind.shiftdelete {} -body {
+  list [bind Wentry <Shift-Delete>] [bind Entry <Shift-Delete>]
+} -result {{ event generate [winfo parent %W] <<Delete>> } {}}
+::tcltest::test Delete.button {} -output {} -body {
+  $::thema::Pane.lst.4.tool.buttons.delete cget -command
+} -result [list event generate $::thema::Pane.lst.4 <<Delete>>]
+::tcltest::test Delete.event {
+  from wentry
+} -output {} -body {
+  bind Thema <<Delete>>
+} -result {::namespace inscope ::thema {Delete %W}}
+
+::tcltest::test Delete.1 {
+} -output {} -body {
+  focus $::thema::Pane.lst.4.entry
+  update
+  ::thema::Delete $::thema::Pane.lst.4
+  update
+  list \
+    [focus -lastfor .] \
+    [winfo exists $::thema::Pane.lst.4] \
+    [SQLCMD eval {SELECT rowid FROM theme WHERE rowid = 4}]
+} -result [list $::thema::Pane.lst.5.entry 0 {}]
+
+::tcltest::test Delete.2 {
+} -output {} -body {
+  focus $::thema::Pane.lst.6.entry
+  update
+  ::thema::Delete $::thema::Pane.lst.6
+  update
+  list \
+    [focus -lastfor .] \
+    [winfo exists $::thema::Pane.lst.6] \
+    [SQLCMD eval {SELECT rowid FROM theme WHERE rowid = 6}]
+} -result [list $::thema::Pane.lst.5.entry 0 {}]
+
+
+::tcltest::test ToggleArticle.1 {
+  when closed
+} -output {} -body {
+  ::wentry::ToggleArticle $::thema::Pane.lst.2.entry
+  update 
+  list \
+    [focus -lastfor .] \
+    [pack slaves $::thema::Pane.lst.2]
+} -result {.3.0.scroll.lst.2.article.txt {.3.0.scroll.lst.2.tool .3.0.scroll.lst.2.entry .3.0.scroll.lst.2.article}}
+
+::tcltest::test ToggleArticle.2 {
+
+} -output {} -body {
+  ::wentry::ToggleArticle $::thema::Pane.lst.2.entry
+  update
+  list \
+    [focus -lastfor .] \
+    [pack slaves $::thema::Pane.lst.2]
+} -result {.3.0.scroll.lst.2.entry {.3.0.scroll.lst.2.tool .3.0.scroll.lst.2.entry}}
+
+
+
+
+
+::tcltest::wait_until_  0
+SQLCMD close
+::tcltest::cleanupTests
+
+

@@ -1,0 +1,175 @@
+package require tcltest 2
+
+::tcltest::loadTestedCommands
+
+source [file join $::TSKNGR_APPDIR frames.tcl]
+
+
+
+::tcltest::test bind.top {
+  bindigs for scrolling, help, and for quit app
+} -body {
+  list \
+    [expr {"<Control-Key-q>" in [bind .]}] \
+    [expr {"<Control-Key-Q>" in [bind .]}] \
+    [expr {"<<VCenter>>" in [bind .]}] \
+    [expr {"<Button-5>" in [bind .]}] \
+    [expr {"<Button-4>" in [bind .]}]
+} -result {1 1 1 1 1}
+
+
+
+::tcltest::test frames.draw {
+  all 'static' widgets
+} -output {} -body {
+  dict set ::gi::Style -background .1 red 
+  dict set ::gi::Style -background .2 green
+  dict set ::gi::Style -background .3 blue
+  wm geometry . 1200x700+909+212
+  ::frames::draw
+  update
+  list \
+    [winfo exists .1]     \
+    [winfo exists .2]     \
+    [winfo exists .3]     \
+    [winfo exists .1.1]     \
+    [winfo exists .2.1]     \
+    [winfo exists .3.1]     \
+    [winfo exists .status] \
+    [grid size .]
+} -result {1 1 1 1 1 1 1 {3 2}}
+
+::tcltest::test frames.panes {
+} -output {} -body {
+  ::todo::draw .1.1 .1.0.scroll
+  ::task::draw .2.1 .2.0.scroll
+  ::thema::draw .3.1 .3.0.scroll
+}
+
+::tcltest::test frames.load {
+} -output {} -setup {
+  ::domain::connect ":memory:" ::wstatus::error
+  ::domain::insertTodo 0 2019-05-08 1 {}
+  ::domain::insertTodo 0 2019-05-08 2 {}
+  ::domain::insertTodo 0 0000-00-00 1 {}
+  ::domain::insertTodo 0 2019-09-10 2 {}
+  ::domain::insertTodo 0 2019-09-10 1 {}
+  ::domain::insertTodo 0 0000-00-00 2 {}
+  ::domain::updateTodo 1 todo1
+  ::domain::updateTodo 2 todo2
+  ::domain::updateTodo 3 todo3
+  ::domain::updateTodo 4 todo4
+  ::domain::updateTodo 5 todo5
+  ::domain::updateTodo 6 todo6
+  ::domain::insertTask 0 1 {}
+  ::domain::insertTask 0 2 {}
+  ::domain::insertTask 0 3 {}
+  ::domain::insertTask 1 1 {}
+  ::domain::insertTask 1 2 {}
+  ::domain::insertTask 3 1 {}
+  ::domain::insertTask 6 1 {}
+  ::domain::insertTask 7 1 {}
+  ::domain::updateTask 1 task1
+  ::domain::updateTask 2 task2
+  ::domain::updateTask 3 task3
+  ::domain::updateTask 4 task4
+  ::domain::updateTask 5 task5
+  ::domain::updateTask 6 task6
+  ::domain::updateTask 7 task7
+  ::domain::updateTask 8 task8
+  ::domain::insertThema 1 {}
+  ::domain::insertThema 2 {}
+  ::domain::insertThema 3 {}
+  ::domain::insertThema 4 {}
+  ::domain::insertThema 5 {}
+  ::domain::updateThema 1 thema1
+  ::domain::updateThema 2 thema2
+  ::domain::updateThema 3 thema3
+  ::domain::updateThema 4 thema4
+  ::domain::updateThema 5 thema5
+  ::domain::updateThemaArticle 2 {article  context} {} {} {1 1.8 {} {}}
+  ::domain::updateThemaArticle 3 {article  context} {} {} \
+            {1 1.8 debian "https://debian.org"}
+} -body {
+  ::todo::load [::domain::TodoLista]
+  ::task::load [::domain::TaskLista]
+  ::thema::load [::domain::ThemaLista]
+}
+
+::tcltest::test accordion.1 {
+} -output {} -body {
+  after $::CONTINUE_AFTER_
+  $::todo::Pane.1.tool.accordion invoke
+}
+::tcltest::test accordion.2 {
+} -output {} -body {
+  after $::CONTINUE_AFTER_
+  $::todo::Pane.1.tool.accordion invoke
+}
+
+::tcltest::test SelectEditSave {
+  focsus in entry and change text
+} -output {} -body {
+  after $::CONTINUE_AFTER_
+  focus $::todo::Pane.4.lst.00000000.3.entry
+  update
+  $::todo::Pane.4.lst.00000000.3.entry insert end " hahahah"
+  update
+  after $::CONTINUE_AFTER_
+  event generate $::todo::Pane.4.lst.00000000.3.entry <Control-s>
+  update
+  SQLCMD eval {SELECT todo FROM todos WHERE rowid=3}
+} -result {{todo3 hahahah}}
+
+::tcltest::test SelectEditChangeFocusSave {
+  focsus in entry and change text
+} -output {} -body {
+  after $::CONTINUE_AFTER_
+  focus $::todo::Pane.4.lst.00000000.3.entry
+  update
+  $::todo::Pane.4.lst.00000000.3.entry delete 0 end
+  $::todo::Pane.4.lst.00000000.3.entry insert 0 todo3
+  update
+  after $::CONTINUE_AFTER_
+  focus $::task::Pane.lst.2.entry
+  update
+  SQLCMD eval {SELECT todo FROM todos WHERE rowid=3}
+} -result todo3
+
+
+::tcltest::test frames.Walk.1 {
+  tab shift-tab implementation
+} -output {} -body {
+  ::frames::Walk {} next
+  update
+  focus -lastfor .
+} -result "$::todo::Pane.1.tool.accordion"
+
+::tcltest::test frames.Walk.2 {
+  tab shift-tab implementation
+} -output {} -body {
+  ::frames::Walk $::todo::Pane.1.tool.accordion next
+  update
+  focus -lastfor . 
+} -result "$::todo::Pane.2.tool.accordion"
+
+::tcltest::test frames.Walk.3 {
+  tab shift-tab implementation
+} -output {} -body {
+  ::frames::Walk {} prev
+  update
+  focus -lastfor . 
+} -result ".status.help"
+
+::tcltest::test warning {
+  put note in status about closing windows 
+} -body {
+  set ::wstatus::error "window will close after 5 min"
+  update
+}
+
+
+::tcltest::wait_until_ 0
+SQLCMD close
+::tcltest::cleanupTests
+

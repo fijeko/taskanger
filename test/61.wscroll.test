@@ -1,0 +1,120 @@
+package require tcltest 2
+
+::tcltest::loadTestedCommands
+
+package require wscroll 1.0
+# requre wentry for drawing entries in scroller 
+package require wentry 1.0
+
+
+::tcltest::test frames {
+} -output {} -body {
+  wm geometry . +1300+150
+  pack [frame .1 -width 300 -height 900] -padx 4
+  pack propagate .1 false
+  
+  ::wscroll::draw .1.0
+  
+  list \
+    [winfo exists .1.0.scroll] \
+    [winfo manager .1.0.scroll]
+} -result {1 place}
+
+
+::tcltest::test Find {
+  search scroll window
+} -output {} -body {
+  list \
+    [::wscroll::Find .1.0.scroll.lst.22.entry] \
+    [::wscroll::Find .A.B.C] \
+    [::wscroll::Find .1] \
+    [::wscroll::Find .]
+} -result {.1.0.scroll {} {} {}}
+
+
+::tcltest::test packentries {
+} -output {} -body {
+  pack  [frame .1.0.scroll.1 -bg yellow -pady 8] -side top -fill both -expand 1
+  pack  [frame .1.0.scroll.2 -bg violet -pady 8] -side top -fill both -expand 1
+
+  for {set w 1} {$w < 14} {incr w} {
+    set w1 [expr {$w + 20}]
+    set w2 [expr {$w + 50}]
+    ::wentry::draw .1.0.scroll.1.$w1 "test $w1" true
+    ::wentry::calendarWidget .1.0.scroll.1.$w1 .1.0.cal1$w1 {}
+    
+    ::wentry::draw .1.0.scroll.2.$w2 "test $w2" true
+    ::wentry::articleWidget .1.0.scroll.2.$w2 {}
+  }
+  update
+  unset w w1 w2
+  list \
+    [winfo manager .1]          \
+    [winfo manager .1.0]        \
+    [winfo manager .1.0.scroll]      \
+    [winfo manager .1.0.scroll.1]    \
+    [winfo manager .1.0.scroll.2]    \
+    [winfo manager .1.0.scroll.1.22] \
+    [winfo manager .1.0.scroll.1.23] \
+    [winfo height .1.0] 
+} -result {pack pack place pack pack pack pack 900}
+
+
+::tcltest::test Delta.1 {
+  distance between window and center of its scroller pane
+  windows above center return positive
+  window bellowe center return negative
+} -output {} -body {
+  list \
+    [expr {[::wscroll::Delta .1.0.scroll.1.21 .1.0 892] > 0}] \
+    [expr {[::wscroll::Delta .1.0.scroll.2.59 .1.0 892] < 0}]
+} -result {1 1}
+
+
+::tcltest::test Position.1 {
+} -output {} -body {
+  expr {
+    [::wscroll::Position .1.0.scroll -400 900] ==
+    ([winfo height .1.0] - [winfo height .1.0.scroll])
+  }
+} -result 1
+
+::tcltest::test VerticalCenter.1 {} -output {} -body {
+  ::wscroll::VerticalCenter .1.0.scroll.2.60
+  update
+  expr {
+    [dict get [place info .1.0.scroll] -y] ==
+    ([winfo height .1.0] - [winfo height .1.0.scroll])
+  }
+} -result 1
+
+::tcltest::test VerticalCenter.2 {} -output {} -body {
+  ::wscroll::VerticalCenter .1.0.scroll.1.27
+  update
+  dict get [place info .1.0.scroll] -y
+} -result {0}
+
+
+::tcltest::test Scroll.1 {} -output {} -body {
+  ::wscroll::Scroll .1.0.scroll.1.27 -1
+  ::wscroll::Scroll .1.0.scroll.1.27 -1
+  ::wscroll::Scroll .1.0.scroll.1.27 -1
+  update
+  dict get [place info .1.0.scroll] -y
+} -result -30
+
+::tcltest::test Scroll.2 {} -output {} -body {
+  ::wscroll::Scroll .1.0.scroll.1.27 +1
+  ::wscroll::Scroll .1.0.scroll.1.27 +1
+  ::wscroll::Scroll .1.0.scroll.1.27 +1
+  ::wscroll::Scroll .1.0.scroll.1.27 +1
+  update
+  dict get [place info .1.0.scroll] -y
+} -result 0
+
+::tcltest::wait_until_ 0
+::tcltest::cleanupTests
+
+
+
+

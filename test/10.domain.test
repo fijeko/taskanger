@@ -1,0 +1,231 @@
+package require tcltest 2
+
+::tcltest::loadTestedCommands
+
+package require domain 1.0
+
+::tcltest::test connect.1 {
+  create new database
+} -output {} -cleanup {
+  file delete [file join [pwd] x.myshelf]
+} -body {
+  ::domain::connect [file join [pwd] x.myshelf] ::errlabel
+  list \
+    [file exists [file join [pwd] x.myshelf]] \
+    [info commands ::SQLCMD] \
+    [::domain::Check]
+} -result {1 ::SQLCMD {1 77777}}
+
+::tcltest::test connect.2 {
+  malformed database file, open :memory: instead
+} -output {} -setup {
+  ::tcltest::makeFile {} dummy.myshelf
+  sqlite3 SL3 dummy.myshelf
+  SL3 eval {CREATE TABLE xy (a INT, b TEXT, c INT)}
+  SL3 close
+} -cleanup {
+  ::tcltest::removeFile dummy.myshelf
+  unset ::errlabel
+} -body {
+  ::domain::connect [file join [pwd] dummy.myshelf] ::errlabel
+  list \
+    [file exists [file join [pwd] dummy.myshelf]] \
+    [info commands ::SQLCMD] \
+    [set ::errlabel] \
+    [::domain::Check]
+} -result {1 ::SQLCMD {error in dummy.myshelf} {1 77777}}
+
+
+::tcltest::test connect.3 {
+  some stupid  file, open :memory: instead
+} -output {} -setup {
+  ::tcltest::makeFile {blabla blabla} dummy.myshelf
+} -cleanup {
+  ::tcltest::removeFile dummy.myshelf
+  unset ::errlabel
+} -body {
+  ::domain::connect [file join [pwd] dummy.myshelf] ::errlabel
+  list \
+    [set ::errlabel] \
+    [info commands ::SQLCMD] \
+    [::domain::Check]
+} -result {{error in dummy.myshelf} ::SQLCMD {1 77777}}
+
+
+::tcltest::test connect.4 {
+  to old version missing column in thema
+} -output {} -setup {
+  file copy [file join [pwd] testoldver.base] [file join [pwd] testoldver.base.old] 
+} -cleanup {
+  file delete [file join [pwd] testoldver.base] 
+  file copy [file join [pwd] testoldver.base.old] [file join [pwd] testoldver.base] 
+  file delete [file join [pwd] testoldver.base.old]
+} -body {
+  ::domain::connect [file join [pwd] testoldver.base] ::errlabel
+  list \
+    [info exists ::errlabel] \
+    [info commands ::SQLCMD] \
+    [::domain::Check]
+} -result {0 ::SQLCMD {1 77777}}
+
+
+::tcltest::test connect.5 {
+  to :memory: database for testing
+} -output {} -cleanup {
+} -body {
+  ::domain::connect ":memory:" ::errlabel
+  list \
+    [info exists ::errlabel] \
+    [info commands ::SQLCMD] \
+    [::domain::Check]
+} -result {0 ::SQLCMD {1 77777}}
+
+
+::tcltest::test insertTodo {} -output {} -body {
+  list \
+    [::domain::insertTodo 0 2019-12-12 1 {}]  \
+    [::domain::insertTodo 0 2019-12-12 2 {}]  \
+    [::domain::insertTodo 0 2019-12-12 2 {2}]
+} -result {1 2 3}
+::tcltest::test insertTask {} -output {} -body {
+  list \
+    [::domain::insertTask 0 1 {}] \
+    [::domain::insertTask 0 2 {}] \
+    [::domain::insertTask 0 3 {}] \
+    [::domain::insertTask 1 1 {}] \
+    [::domain::insertTask 1 2 {}] \
+    [::domain::insertTask 4 1 {}]
+} -result {1 2 3 4 5 6}
+::tcltest::test insertThema {} -output {} -body {
+  list \
+    [::domain::insertThema 1 {}] \
+    [::domain::insertThema 2 {}] \
+    [::domain::insertThema 2 {2}] 
+} -result {1 2 3}
+::tcltest::test database.1 {} -output {} -body {
+  list \
+    [SQLCMD eval {SELECT rowid,* FROM todos}] \
+    [SQLCMD eval {SELECT rowid,* FROM tasks}] \
+    [SQLCMD eval {SELECT rowid,* FROM theme}]
+} -result {{1 0 2019-12-12 1 {} 2 0 2019-12-12 3 {} 3 0 2019-12-12 2 {}} {0 0 {} {} {} 1 1 0 1 {} 2 2 0 2 {} 3 3 0 3 {} 4 4 1 1 {} 5 5 1 2 {} 6 6 4 1 {}} {1 1 {} {} {} {} {} 2 3 {} {} {} {} {} 3 2 {} {} {} {} {}}}
+
+::tcltest::test updateTodo {} -output {} -body {
+  ::domain::updateTodo 1 todo1
+}
+::tcltest::test updateTask {} -output {} -body {
+  ::domain::updateTask 1 task1
+}
+::tcltest::test updateThema {} -output {} -body {
+  ::domain::updateThema 1 thema1
+}
+
+::tcltest::test deleteTask.withChildren {} -output {} -body {
+  ::domain::deleteTask 1 {2 3}
+  SQLCMD eval {SELECT id,parent,rang,task FROM tasks}
+} -result {0 {} {} {} 2 0 1 {} 3 0 2 {}}
+
+
+::tcltest::test updateTodoRangs {
+  move item in same datum for one range
+} -output {} -body {
+  ::domain::updateTodoRangs 1 3
+  SQLCMD eval {SELECT rowid,rang FROM todos}
+} -result {1 2 2 3 3 1}
+::tcltest::test updateTaskRangs {
+  move item in same parent for one range
+} -output {} -body {
+  ::domain::updateTaskRangs 2 3
+  SQLCMD eval {SELECT id,parent,rang FROM tasks WHERE id<>0}
+} -result {2 0 2 3 0 1}
+::tcltest::test updateThemaRangs {
+  move one range
+} -output {} -body {
+  ::domain::updateThemaRangs 3 2
+  SQLCMD eval {SELECT rowid,rang FROM theme}
+} -result {1 1 2 2 3 3}
+
+
+::tcltest::test deleteTodo {} -output {} -body {
+  ::domain::deleteTodo 2 {}
+  SQLCMD eval {SELECT rowid,rang FROM todos}
+} -result {1 2 3 1}
+::tcltest::test deleteThema {} -output {} -body {
+  ::domain::deleteThema 1 {2 3}
+  SQLCMD eval {SELECT rowid,rang FROM theme}
+} -result {2 1 3 2}
+
+
+::tcltest::test updateTodoRecord {
+  moving item between datums and update rangs
+} -output {} -body {
+  ::domain::updateTodoRecord 3 1 2020-02-01 1 {1}
+  SQLCMD eval {SELECT rowid,* FROM todos}
+} -result {1 0 2019-12-12 1 todo1 3 1 2020-02-01 1 {}}
+
+::tcltest::test updateTaskLevels {} -output {} -body {
+  SQLCMD transaction {
+    SQLCMD eval {DELETE FROM tasks}
+    SQLCMD eval {INSERT INTO tasks (id,parent,rang,task) VALUES (1,0,1,'abc')}
+    SQLCMD eval {INSERT INTO tasks (id,parent,rang,task) VALUES (2,1,1,'bcd')}
+    SQLCMD eval {INSERT INTO tasks (id,parent,rang,task) VALUES (3,2,1,'cde')}
+    SQLCMD eval {INSERT INTO tasks (id,parent,rang,task) VALUES (4,0,2,'def')}
+    SQLCMD eval {INSERT INTO tasks (id,parent,rang,task) VALUES (5,4,1,'efg')}
+    SQLCMD eval {INSERT INTO tasks (id,parent,rang,task) VALUES (6,5,1,'fgh')}
+    SQLCMD eval {INSERT INTO tasks (id,parent,rang,task) VALUES (7,5,2,'ghi')}
+    SQLCMD eval {INSERT INTO tasks (id,parent,rang,task) VALUES (8,5,3,'hij')}
+    SQLCMD eval {INSERT INTO tasks (id,parent,rang,task) VALUES (9,0,3,'ijk')}
+    SQLCMD eval {INSERT INTO tasks (id,parent,rang,task) VALUES (13,0,4,'mno')}
+    SQLCMD eval {INSERT INTO tasks (id,parent,rang,task) VALUES (14,0,5,'nop')}
+  }
+  
+  ::domain::updateTaskLevels 4 1 2 {9 13 14} {}
+  SQLCMD eval {SELECT id,parent,rang FROM tasks WHERE id IN (1,2,4,5,13,14)}
+} -result {1 0 1 2 1 1 4 1 2 5 4 1 13 0 3 14 0 4}
+
+
+::tcltest::test prepareThemaArticle.1 {
+} -output {} -setup {
+  set article {article with tags marks wins}
+  set tags {tags}
+  set marks {marks}
+  set links {links}
+  set wins {wins}
+} -cleanup {
+  unset article tags marks links wins
+} -body {
+  SQLCMD eval {UPDATE theme
+    SET article=:article, tags=:tags, marks=:marks, wins=:wins
+    WHERE rowid=3
+  }
+  SQLCMD eval {SELECT article,tags,marks,wins FROM theme WHERE rowid=3}
+} -result {{article with tags marks wins} tags marks wins}
+
+::tcltest::test updateThemaArticle.1 {} -output {} -body {
+  ::domain::updateThemaArticle 3 \
+    {updated article with tags marks wins} {updated tags} {updated marks} {updated links}
+  SQLCMD eval {SELECT article,tags,marks,wins FROM theme WHERE rowid=3}
+} -result {{updated article with tags marks wins} {updated tags} {updated marks} {updated links}}
+
+
+
+::tcltest::test TodoLista { } -output {} -body {
+  ::domain::TodoLista
+} -result {1 {2019-12-12 {1 todo1}} 2 {} 3 {} 4 {} 5 {} 6 {2020-02-01 {3 {}}}}
+
+::tcltest::test TaskLista { } -output {} -body {
+  ::domain::TaskLista
+} -result {1 abc {1 2} bcd {1 2 3} cde {1 4} def {1 4 5} efg {1 4 5 6} fgh {1 4 5 7} ghi {1 4 5 8} hij 9 ijk 13 mno 14 nop}
+
+::tcltest::test ThemaLista { } -output {} -body {
+  ::domain::ThemaLista
+} -result {2 {} {} {} {} {} 3 {} {updated article with tags marks wins} {updated tags} {updated marks} {updated links}}
+
+
+
+
+
+
+
+SQLCMD close
+::tcltest::cleanupTests
+

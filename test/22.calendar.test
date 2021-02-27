@@ -1,0 +1,276 @@
+package require tcltest 2
+
+::tcltest::loadTestedCommands
+
+package require calendar 1.0
+
+::tcltest::test frames {} -body {
+  dict set ::gi::WinMng geometry +1600+50
+  dict set ::gi::WinMng minsize {350 800}
+  
+  #~ pack [frame .0 -background yellow] -expand 1 -fill y 
+  #~ pack [frame .0.1] -fill x
+  #~ frame .0.2
+  pack [frame .0]
+  pack [frame .0.1]
+  frame .0.2
+  concat
+}
+
+::tcltest::test Context {
+  calendar month list
+} -output {} -body {
+  list \
+    [lindex [::calendar::Context 1 12 2012 2012-12-03] 7] \
+    [llength [::calendar::Context 1 12 2012 2012-12-03]]
+} -result {{10 2012-12-03 1 C} 42}
+
+
+::tcltest::test create.1 {
+  = calendar window already exist 
+} -output {} -body {
+  ::calendar::create .0.1
+} -returnCodes {1} -result {window name "1" already exists in parent}
+::tcltest::test create.1.status {
+  = array index shouldnot exists
+} -output {} -body {
+  list \
+    [array names ::calendar::status] \
+    [array names ::calendar::config] \
+    [winfo exists .0.1] \
+    [winfo exists .0.1.tool]
+} -result {{} {} 1 0}
+
+::tcltest::test create.2 {
+  = bad window name
+} -output {} -body {
+  ::calendar::DrawFrame blabla
+} -returnCodes {1} -result {bad window path name "blabla"}
+::tcltest::test create.2.status {
+  = array index shouldnot exists
+} -output {} -body {
+  list \
+    [array names ::calendar::status] \
+    [array names ::calendar::config]
+} -result {{} {}}
+
+::tcltest::test create.3 {
+  create calendar widget
+} -output {} -body {
+  ::calendar::create .0.1.cal -datum 2002-02-03
+  update
+  list \
+    [winfo exists .0.1.cal] \
+    [winfo exists .0.1.cal.ctool] \
+    [winfo exists .0.1.cal.ctool.tgl] \
+    [winfo exists .0.1.cal.ctool.centry] \
+    [winfo exists .0.1.cal.ctool.ok] \
+    [winfo exists .0.1.cal.ctool.esc] \
+    [winfo exists .0.1.cal.cwdg]   \
+    [winfo exists .0.1.cal.cwdg.ctool] \
+    [winfo exists .0.1.cal.cwdg.days] \
+    [winfo exists .0.1.cal.cwdg.cdays] \
+    [dict get $::calendar::status(.0.1.cal) -default] \
+    [dict get $::calendar::status(.0.1.cal) -current] \
+    [dict get $::calendar::config(.0.1.cal) -cmd] \
+    [dict get $::calendar::config(.0.1.cal) -pos] \
+    [.0.1.cal.ctool.centry get]
+} -result {1 1 1 1 1 1 1 1 1 1 2002-02-03 2002-02-03 {} below 2002-02-03}
+
+::tcltest::test create.4 {
+  create calendar in window that is not packed
+} -output {} -body {
+  ::calendar::create .0.2.cal -datum 2005-02-03 -position above
+  update
+  list \
+    [winfo exists .0.2.cal] \
+    [winfo manager .0.2.cal] \
+    [.0.2.cal.ctool.centry get]
+} -result {1 pack 2005-02-03}
+
+
+::tcltest::test select.1 {
+  = caller change current datum to empty datum
+} -output {} -body {
+  ::calendar::select .0.1.cal ""
+  list [.0.1.cal.ctool.centry get] $::calendar::status(.0.1.cal)
+} -result {{} {-month {} -year {} -current {} -selected {} -default 2002-02-03}}
+
+::tcltest::test select.2.1 {
+  = change current datum to "2012-08-05" from script
+} -output {} -body {
+  ::calendar::select .0.1.cal "2012-08-05"
+  list [.0.1.cal.ctool.centry get] $::calendar::status(.0.1.cal)
+} -result {2012-08-05 {-month {} -year {} -current 2012-08-05 -selected {} -default 2002-02-03}}
+
+::tcltest::test select.2.2 {
+  = change current datum to "2012-8-5" from script
+} -output {} -body {
+  ::calendar::select .0.1.cal "2012-8-5"
+  list [.0.1.cal.ctool.centry get] $::calendar::status(.0.1.cal)
+} -result {2012-08-05 {-month {} -year {} -current 2012-08-05 -selected {} -default 2002-02-03}}
+
+::tcltest::test select.3 {
+  = caller change current datum to "2012-22-66" tcl::clock recalculate to "2013-12-05"
+} -output {} -body {
+  ::calendar::select .0.1.cal "2012-22-66"
+  list [.0.1.cal.ctool.centry get] $::calendar::status(.0.1.cal)
+} -result {2013-12-05 {-month {} -year {} -current 2013-12-05 -selected {} -default 2002-02-03}}
+
+::tcltest::test select.4 {
+  = caller change current datum to "hojlal" , return error
+} -output {} -body {
+  ::calendar::select .0.1.cal "hojlal"
+} -returnCodes {1} -result {Invalid datum. Current datum is 2002-02-03}
+
+::tcltest::test select.5 {
+  = caller change current on widget whose parent is not packed
+} -output {} -body {
+  ::calendar::select .0.2.cal "1995-06-02"
+  list [.0.2.cal.ctool.centry get] $::calendar::status(.0.2.cal)
+} -result {1995-06-02 {-month {} -year {} -current 1995-06-02 -selected {} -default 2005-02-03}}
+
+
+::tcltest::test PackCal.1 {
+  = respecting config(path) -pos
+} -output {} -body {
+  ::calendar::PackCal .0.1.cal
+  update
+  list \
+    [winfo manager .0.1.cal.cwdg] \
+    [expr {[winfo y .0.1.cal.cwdg] > [winfo y .0.1.cal.ctool]}] \
+    [winfo manager .0.1.cal.cwdg.ctool] \
+    [winfo manager .0.1.cal.cwdg.days] \
+    [winfo manager .0.1.cal.cwdg.cdays]
+} -result {pack 1 pack pack pack}
+
+::tcltest::test CloseCal.1.1 {
+  = return true, cwdg was packed
+} -output {} -body {
+  list \
+    [::calendar::CloseCal .0.1.cal] \
+    [winfo manager .0.1.cal.cwdg]
+} -result {true {}}
+::tcltest::test CloseCal.1.2 {
+  = return false, cwdg was not packed
+} -output {} -body {
+  ::calendar::CloseCal .0.1.cal
+} -result false
+
+
+::tcltest::test PackCal.2.1 {
+  = respecting config(path) -pos
+} -output {} -body {
+  ::calendar::PackCal .0.2.cal
+  update
+  list \
+    [winfo manager .0.2.cal.cwdg] \
+    [winfo y .0.2.cal.cwdg] \
+    [winfo y .0.2.cal.ctool]
+} -result {pack 0 0}
+
+::tcltest::test PackCal.2.2 {
+  = pack parent window
+} -output {} -body {
+  pack .0.2 -fill x
+  update
+  list [expr {[winfo y .0.2.cal.cwdg] < [winfo y .0.2.cal.ctool]}]
+} -result {1}
+
+
+::tcltest::test RedrawCal {
+  when wcal is open and datum is changed or when toggle wcal
+  draw datums in wcal
+} -output {} -body {
+  ::calendar::RedrawCal .0.2.cal
+}
+
+
+::tcltest::test Toggle.1 {
+  when button clicked open calendar popW to show current datum
+} -output {} -body {
+  ::calendar::Toggle .0.1.cal
+  update
+  list  [winfo manager .0.1.cal.cwdg] $::calendar::status(.0.1.cal)
+} -result {pack {-month 12 -year 2013 -current 2013-12-05 -selected 13 -default 2002-02-03}}
+
+::tcltest::test Toggle.2 {
+  when button clicked close calendar popW
+} -output {} -body {
+  ::calendar::Toggle .0.1.cal
+  update
+  list  [winfo manager .0.1.cal.cwdg] $::calendar::status(.0.1.cal)
+} -result {{} {-month {} -year {} -current 2013-12-05 -selected {} -default 2002-02-03}}
+
+
+::tcltest::test BtnT  {
+  in cwdg display current month year
+  call DrawMY and DrawDays
+} -output {} -body {
+  ::calendar::BtnT .0.2.cal
+} -result {}  
+
+::tcltest::test BtnPY {
+  go to previous year - same month
+  call DrawMY and DrawDays
+} -output {} -body {
+  ::calendar::BtnPY .0.2.cal
+} -result {}  
+
+::tcltest::test BtnNY {
+  go to next year - same month
+  call DrawMY and DrawDays
+} -output {} -body {
+  ::calendar::BtnNY .0.2.cal
+} -result {} 
+
+::tcltest::test BtnPM {
+  go to previous month
+  call DrawMY and DrawDays
+} -output {} -body {
+  ::calendar::BtnPM .0.2.cal
+} -result {}  
+
+::tcltest::test BtnNM {
+  go to next month
+  call DrawMY and DrawDays
+} -output {} -body {
+  ::calendar::BtnNM .0.2.cal
+} -result {}  
+
+
+::tcltest::test Escape {
+  = set current datum to default datum, RedrawEntry and CloseCal, 
+  clean error in wstatus
+} -output {} -body {
+  ::calendar::Escape .0.2.cal
+  update
+  list \
+    [.0.2.cal.ctool.centry get] \
+    [winfo manager .0.2.cal.cwdg]
+} -result {2005-02-03 {}}
+
+
+::tcltest::test Return {
+  = read datum from entry and check if valid 
+  - not valid: datum set calendar to default and exit procedure
+  - valid:  unpack calendar, send even or call cmd
+  wstatus error
+} -output {.0.1.cal 2006-01-01} -body {
+  ::calendar::select .0.1.cal 2006-01-01
+  bind .0.1.cal <<CalendarSelected>> {puts -nonewline %d}
+  update
+  ::calendar::Return .0.1.cal
+} -result {}
+
+
+
+
+
+::tcltest::wait_until_ 0
+::tcltest::cleanupTests
+
+
+
+
+

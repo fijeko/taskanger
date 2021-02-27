@@ -1,0 +1,39 @@
+package require tcltest 2
+
+::tcltest::loadTestedCommands
+
+package require help 1.0
+
+
+::tcltest::test open.1 {
+   in toplevel window
+} -output {} -body {
+  ::help::open
+  list \
+    [winfo exists .help] \
+    [winfo toplevel .help]
+} -result {1 .help}
+
+
+::tcltest::test bind.open {
+  on toplevel window
+} -output {} -body {
+  bind . <F1>
+} -result {::help::open}
+
+::tcltest::test open.2 {
+  when help is already open
+} -output {} -body {
+  ::help::open
+  list \
+    [winfo exists .help] \
+    [winfo toplevel .help]
+} -result {1 .help}
+
+
+::tcltest::wait_until_ 0
+::tcltest::cleanupTests
+
+
+
+

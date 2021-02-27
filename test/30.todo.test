@@ -1,0 +1,568 @@
+package require tcltest 2
+
+::tcltest::loadTestedCommands
+
+source [file join $::TSKNGR_APPDIR todo.tcl]
+
+
+::tcltest::test draw {
+  'static' frames
+} -output {} -body {
+  dict set ::gi::WinMng geometry +1600+50
+  dict set ::gi::WinMng minsize {350 800}
+  
+  grid [frame .1 ]
+  grid [frame .11]
+  pack [frame .1.0] [frame .1.0.scroll] -fill both
+  #~ grid propagate .
+  ::todo::draw .11 .1.0.scroll
+  list \
+    [winfo exists $::todo::Pane.1.tool.accordion] \
+    [winfo exists $::todo::Pane.1.tool.insert]    \
+    [winfo exists $::todo::Pane.2.tool.accordion] \
+    [winfo exists $::todo::Pane.2.tool.insert]    \
+    [winfo exists $::todo::Pane.3.tool.accordion] \
+    [winfo exists $::todo::Pane.3.tool.insert]    \
+    [winfo exists $::todo::Pane.4.tool.accordion] \
+    [winfo exists $::todo::Pane.4.tool.insert]    \
+    [winfo exists $::todo::Pane.5.tool.accordion] \
+    [winfo exists $::todo::Pane.5.tool.insert]    \
+    [winfo exists $::todo::Pane.6.tool.accordion] \
+    [winfo exists $::todo::Pane.6.tool.insert]    \
+    [winfo exists $::todo::Pane.6.tool.insert]    \
+    [winfo exists $::todo::PaneIns.calendar.ctool] \
+    [winfo exists $::todo::PaneIns.calendar.cwdg] \
+} -result {1 0 1 1 1 1 1 1 1 0 1 0 0 1 1}
+
+::tcltest::test load {
+  data from database and draw items
+  -- {section {datum {rowid todo ...} datum ..} section ..}
+} -output {} -setup {
+  ::domain::Connect ":memory:"
+  ::domain::insertTodo 0 2019-05-08 1 {}
+  ::domain::insertTodo 0 2019-05-08 2 {}
+  ::domain::insertTodo 0 0000-00-00 1 {}
+  ::domain::insertTodo 0 2019-09-10 2 {}
+  ::domain::insertTodo 0 2019-09-10 1 {}
+  ::domain::insertTodo 0 0000-00-00 2 {}
+  ::domain::insertTodo 1 2019-03-02 1 {}
+  ::domain::updateTodo 1 todo1
+  ::domain::updateTodo 2 todo2
+  ::domain::updateTodo 3 todo3
+  ::domain::updateTodo 4 todo4
+  ::domain::updateTodo 5 todo5
+  ::domain::updateTodo 6 todo6
+  ::domain::updateTodo 7 todo7
+} -body {
+  ::todo::load [::domain::TodoLista]
+  update
+  list \
+    [winfo exists  $::todo::Pane.1.lst.20190508] \
+    [winfo exists  $::todo::Pane.1.lst.20190910] \
+    [winfo exists  $::todo::Pane.4.lst.00000000] \
+    [winfo exists  $::todo::Pane.6.lst.20190302] \
+    [winfo manager $::todo::Pane.1.lst] \
+    [winfo manager $::todo::Pane.4.lst] \
+    [winfo manager $::todo::Pane.6.lst]
+} -result {1 1 1 1 {} pack {}}
+
+
+::tcltest::test GetSecDatFromDoneDatum.1 {
+} -output {} -body {
+  ::todo::GetSecDatFromDoneDatum 0 2030-12-12
+} -result {5 20301212}
+::tcltest::test GetSecDatFromDoneDatum.2 {
+} -output {} -body {
+  ::todo::GetSecDatFromDoneDatum 1 2020-12-12
+} -result {6 20201212}
+
+::tcltest::test GetSecDatFromWdg {
+} -output {} -body {
+  ::todo::GetSecDatFromWdg $::todo::Pane.4.lst.00000000.12
+} -result {4 00000000}
+
+::tcltest::test GetRowid {
+} -output {} -body {
+  ::todo::GetRowid $::todo::Pane.4.lst.00000000.12.x.y.z
+} -result 12
+
+::tcltest::test GetMaxRang {
+} -output {} -body {
+  ::todo::GetMaxRang 4 00000000
+} -result 3
+
+::tcltest::test GetRowids {
+} -output {} -body {
+  ::todo::GetRowids $::todo::Pane.4.lst.00000000.3
+} -result {6}
+
+::tcltest::test GetNewFocus.1 {
+} -output {} -body {
+  ::todo::GetNewFocus $::todo::Pane.4.lst.00000000.3
+} -result "$::todo::Pane.4.lst.00000000.6"
+::tcltest::test GetNewFocus.2 {
+} -output {} -body {
+  ::todo::GetNewFocus $::todo::Pane.4.lst.00000000.6
+} -result "$::todo::Pane.4.lst.00000000.3"
+::tcltest::test GetNewFocus.3 {
+} -output {} -body {
+  ::todo::GetNewFocus $::todo::Pane.6.lst.20190302.7
+} -result {}
+
+::tcltest::test SetDatumPath {
+} -output {} -body {
+  ::todo::SetDatumPath 6 20190302
+} -result "$::todo::Pane.6.lst.20190302"
+
+::tcltest::test GetDatumPath {
+} -output {} -body {
+  ::todo::GetDatumPath $::todo::Pane.6.lst.20190302.a.b.c.d
+} -result "$::todo::Pane.6.lst.20190302"
+
+::tcltest::test SetAccordionPath {
+} -output {} -body {
+  ::todo::SetAccordionPath 3
+} -result "$::todo::Pane.3.lst"
+
+::tcltest::test SetItemWdg {
+} -output {} -body {
+  ::todo::SetItemWdg 5 20291215 6
+} -result "$::todo::Pane.5.lst.20291215.6"
+
+::tcltest::test GetItemWdg {
+} -output {} -body {
+  ::todo::GetItemWdg $::todo::Pane.5.lst.20291215.6.a.b.c.d
+} -result "$::todo::Pane.5.lst.20291215.6"
+
+::tcltest::test Walk {
+  list of all windows for tab and shifttab
+} -cleanup {
+  pack forget $::todo::Pane.4.lst.00000000.3.tool
+} -output {} -body {
+  pack $::todo::Pane.4.lst.00000000.3.tool
+  ::todo::Walk
+} -result {.1.0.scroll.1.tool.accordion .1.0.scroll.2.tool.accordion .1.0.scroll.2.tool.insert .1.0.scroll.3.tool.accordion .1.0.scroll.3.tool.insert .1.0.scroll.4.tool.accordion .1.0.scroll.4.tool.insert .1.0.scroll.4.lst.00000000.3.tool.buttons.close .1.0.scroll.4.lst.00000000.3.tool.buttons.escape .1.0.scroll.4.lst.00000000.3.tool.buttons.update .1.0.scroll.4.lst.00000000.3.tool.buttons.delete .1.0.scroll.4.lst.00000000.3.tool.buttons.moveup .1.0.scroll.4.lst.00000000.3.tool.buttons.movedn .1.0.scroll.4.lst.00000000.3.tool.todos.totoday .1.0.scroll.4.lst.00000000.3.tool.todos.totomorow .1.0.scroll.4.lst.00000000.3.tool.todos.toever .1.0.scroll.4.lst.00000000.3.tool.todos.todone .1.0.scroll.4.lst.00000000.3.tool.calendar.ctool.tgl .1.0.scroll.4.lst.00000000.3.tool.calendar.ctool.centry .1.0.scroll.4.lst.00000000.3.tool.calendar.ctool.ok .1.0.scroll.4.lst.00000000.3.tool.calendar.ctool.esc .1.0.scroll.4.lst.00000000.3.entry .1.0.scroll.4.lst.00000000.6.entry .1.0.scroll.5.tool.accordion .1.0.scroll.6.tool.accordion .11.calendar.ctool.tgl .11.calendar.ctool.centry .11.calendar.ctool.ok .11.calendar.ctool.esc}
+
+
+::tcltest::test AccordionCmd.button {
+  accordions buttons
+} -output {} -body {
+  expr {
+    [$::todo::Pane.1.tool.accordion cget -command] eq {::todo::AccordionCmd 1} &&
+    [$::todo::Pane.2.tool.accordion cget -command] eq {::todo::AccordionCmd 2} &&
+    [$::todo::Pane.3.tool.accordion cget -command] eq {::todo::AccordionCmd 3} &&
+    [$::todo::Pane.4.tool.accordion cget -command] eq {::todo::AccordionCmd 4} &&
+    [$::todo::Pane.5.tool.accordion cget -command] eq {::todo::AccordionCmd 5} &&
+    [$::todo::Pane.6.tool.accordion cget -command] eq {::todo::AccordionCmd 6} }
+} -result {1}
+
+::tcltest::test AccordionCmd.show {
+  open section accordion 
+  set focus on . fire <FocusOut> on entry with focus and 
+   save its context in database
+} -output {} -body {
+  focus $::todo::Pane.4.lst.00000000.3.entry
+  update
+  ::todo::AccordionCmd 1
+  update
+  list [focus -lastfor .] [winfo manager $::todo::Pane.1.lst]
+} -result {. pack}
+
+::tcltest::test AccordionCmd.hide {
+  close section accordion
+} -output {} -body {
+  focus $::todo::Pane.1.lst.20190508.2.entry
+  update
+  ::todo::AccordionCmd 1
+  update
+  list $::wentry::EntryValue $::wentry::ItemValue \
+      [$::todo::Pane.1.lst.20190508.2.entry cget -state] \
+  [winfo manager $::todo::Pane.1.lst]
+} -result {{} {} readonly {}}
+
+
+::tcltest::test Save.event {
+  from wentry ctrl-s or enter
+} -output {} -body {
+  bind Todo <<Save>>
+} -result {::namespace inscope ::todo {Save %W %d}}
+
+::tcltest::test Save {
+  update value in database
+} -output {} -cleanup {
+  ::todo::Save .1.0.1.lst.20190508.1 todo1
+} -body {
+  focus $::todo::Pane.1.lst.20190508.1.entry
+  ::todo::Save $::todo::Pane.1.lst.20190508.1 tmptxt
+  list \
+    [focus -lastfor .] \
+    [SQLCMD eval {SELECT todo FROM todos WHERE rowid=1}]
+} -result {. tmptxt}
+
+
+::tcltest::test Insert2.button {
+  insert button in today section
+} -output {} -body {
+  list [$::todo::Pane.2.tool.insert cget -command]
+} -result {::todo::Insert2}
+
+::tcltest::test Insert2 {
+  inert new today
+} -output {} -body {
+  ::todo::Insert2
+  update
+  list \
+    [focus -lastfor .] \
+    [winfo exists $::todo::Pane.2.lst.$::todo::Wtoday.8] \
+    [winfo manager $::todo::Pane.2.lst] \
+    [SQLCMD eval {SELECT rowid,todo,rang FROM todos WHERE rowid=8}]
+} -result [list $::todo::Pane.2.lst.$::todo::Wtoday.8.entry 1 pack {8 {} 1}]
+
+
+::tcltest::test Insert3.button {
+  inert new today
+} -output {} -body {
+  list [$::todo::Pane.3.tool.insert cget -command]
+} -result {::todo::Insert3}
+
+::tcltest::test Insert3 {
+  insert new item in section 3 (tomorow)
+} -output {} -body {
+  ::todo::Insert3
+  update
+  list \
+    [focus -lastfor .] \
+    [winfo manager $::todo::Pane.3.lst] \
+    [SQLCMD eval {SELECT rowid,done,rang FROM todos WHERE rowid=9}]
+} -result [list $::todo::Pane.3.lst.$::todo::Wtomorow.9.entry pack {9 0 1}]
+
+
+::tcltest::test Insert4.button {
+  inert new item item in section ever 0000-00-00
+} -output {} -body {
+  list [$::todo::Pane.4.tool.insert cget -command]
+} -result {::todo::Insert4}
+
+::tcltest::test Insert4 {
+  insert new item in section 4 (ever)
+} -output {} -body {
+  ::todo::Insert4
+  update
+  list \
+    [focus -lastfor .] \
+    [winfo manager $::todo::Pane.4.lst]
+} -result [list $::todo::Pane.4.lst.$::todo::Wever.10.entry pack]
+
+
+::tcltest::test InsertDatum {
+  insert new item by datum from calendar
+} -output {} -body {
+  ::todo::InsertDatum 2022-10-02
+  update
+  list \
+    [focus -lastfor .] \
+    [winfo manager $::todo::Pane.5.lst]
+} -result [list $::todo::Pane.5.lst.20221002.11.entry pack]
+
+
+::tcltest::test bind.shiftdelete {} -body {
+  list [bind Wentry <Shift-Delete>] [bind Entry <Shift-Delete>]
+} -result {{ event generate [winfo parent %W] <<Delete>> } {}}
+::tcltest::test Delete.button {} -output {} -body {
+  $::todo::Pane.5.lst.20221002.11.tool.buttons.delete cget -command
+} -result [list event generate $::todo::Pane.5.lst.20221002.11 <<Delete>>]
+::tcltest::test Delete.event {
+  from wentry
+} -output {} -body {
+  bind Todo <<Delete>>
+} -result {::namespace inscope ::todo {Delete %W}}
+
+::tcltest::test Delete.1 {
+} -output {} -body {
+  ::todo::AccordionCmd 5
+  focus $::todo::Pane.5.lst.20221002.11.entry
+  ::todo::Delete $::todo::Pane.5.lst.20221002.11
+  update
+  list \
+    [focus -lastfor .] \
+    [winfo exists  $::todo::Pane.5.lst.20221002] \
+    [winfo manager $::todo::Pane.5.lst] \
+    [SQLCMD eval {SELECT rowid FROM todos WHERE rowid = 11}]
+} -result {. 0 {} {}}
+
+::tcltest::test Delete.2 {
+} -output {} -body {
+  ::todo::AccordionCmd 1
+  focus $::todo::Pane.1.lst.20190508.1.entry
+  update
+  ::todo::Delete $::todo::Pane.1.lst.20190508.1
+  update
+  list \
+    [focus -lastfor .] \
+    [winfo exists  $::todo::Pane.1.lst.20190508] \
+    [winfo exists  $::todo::Pane.1.lst.20190508.1] \
+    [SQLCMD eval {SELECT rowid FROM todos WHERE rowid = 1}] \
+    [SQLCMD eval {SELECT rang FROM todos WHERE rowid = 2}]
+} -result [list $::todo::Pane.1.lst.20190508.2.entry 1 0 {} 1]
+
+::tcltest::test Delete.3 {
+} -output {} -body {
+  focus $::todo::Pane.1.lst.20190910.4.entry
+  update
+  ::todo::Delete $::todo::Pane.1.lst.20190910.4
+  update
+  
+  list \
+    [focus -lastfor .] \
+    [winfo exists  $::todo::Pane.1.lst.20190910] \
+    [winfo exists  $::todo::Pane.1.lst.20190910.4] \
+    [SQLCMD eval {SELECT rowid FROM todos WHERE rowid = 4}]
+} -result [list $::todo::Pane.1.lst.20190910.5.entry 1 0 {}]
+
+
+
+::tcltest::test ToToday.event {
+  from wentry or today button in wentry tools
+} -output {} -body {
+  bind Todo <<ToToday>> 
+} -result {::namespace inscope ::todo {ToToday %W}}
+::tcltest::test ToToday.button {} -output {} -body {
+  $::todo::Pane.4.lst.00000000.6.tool.todos.totoday cget -command
+} -result [list event generate $::todo::Pane.4.lst.00000000.6 <<ToToday>>]
+
+::tcltest::test ToToday {
+  change item datum to today and done to 0
+} -output {} -body {
+  focus $::todo::Pane.4.lst.00000000.6.entry
+  update
+  ::todo::ToToday $::todo::Pane.4.lst.00000000.6
+  update
+  list \
+    [winfo exists $::todo::Pane.4.lst.00000000.6] \
+    [winfo exists $::todo::Pane.2.lst.$::todo::Wtoday.6] \
+    [SQLCMD eval {SELECT rang FROM todos WHERE rowid=10}] \
+    [SQLCMD eval {SELECT datum,rang FROM todos WHERE rowid=6}] \
+    [focus -lastfor .]
+} -result [list 0 1 2 [list $::todo::today 2] $::todo::Pane.2.lst.$::todo::Wtoday.6.entry]
+
+
+
+::tcltest::test ToTomorow.event {
+  from wentry
+} -output {} -body {
+  bind Todo <<ToTomorow>> 
+} -result {::namespace inscope ::todo {ToTomorow %W}}
+::tcltest::test ToTomorow.button {} -output {} -body {
+  $::todo::Pane.4.lst.00000000.10.tool.todos.totomorow cget -command
+} -result [list event generate $::todo::Pane.4.lst.00000000.10 <<ToTomorow>>]
+
+::tcltest::test ToTomorow {
+  change item datum to tomorow and done to 0
+} -output {} -body {
+  focus $::todo::Pane.4.lst.00000000.10.entry
+  update
+  ::todo::ToTomorow $::todo::Pane.4.lst.00000000.10
+  update
+  list \
+    [winfo exists $::todo::Pane.4.lst.00000000.10] \
+    [winfo exists $::todo::Pane.3.lst.$::todo::Wtomorow.10] \
+    [SQLCMD eval {SELECT rang FROM todos WHERE rowid=3}] \
+    [SQLCMD eval {SELECT datum,rang FROM todos WHERE rowid=10}] \
+    [focus -lastfor .]
+} -result [list 0 1 1 [list $::todo::tomorow 2] $::todo::Pane.3.lst.$::todo::Wtomorow.10.entry]
+
+
+::tcltest::test ToEver.event {
+  from wentry
+} -output {} -body {
+  bind Todo <<ToEver>>
+} -result {::namespace inscope ::todo {ToEver %W}}
+::tcltest::test ToEver.button {} -output {} -body {
+  $::todo::Pane.1.lst.20190910.5.tool.todos.toever cget -command
+} -result [list event generate $::todo::Pane.1.lst.20190910.5 <<ToEver>>]
+
+::tcltest::test ToEver {
+  change item datum to ever (0000-00-00) and done to 0
+} -output {} -body {
+  focus $::todo::Pane.1.lst.20190910.5.entry
+  update
+  ::todo::ToEver $::todo::Pane.1.lst.20190910.5
+  update
+  list \
+    [focus -lastfor .] \
+    [winfo exists $::todo::Pane.1.lst.20190910.5] \
+    [winfo exists $::todo::Pane.1.lst.20190910] \
+    [winfo exists $::todo::Pane.4.lst.$::todo::Wever.5] \
+    [SQLCMD eval {SELECT datum,rang FROM todos WHERE rowid=5}] 
+} -result [list $::todo::Pane.4.lst.$::todo::Wever.5.entry 0 0 1 [list $::todo::ever 2] ]
+
+
+::tcltest::test ToDone.event {
+  from wentry
+} -output {} -body {
+  bind Todo <<ToDone>>
+} -result {::namespace inscope ::todo {ToDone %W}}
+::tcltest::test ToDone.button {} -output {} -body {
+  $::todo::Pane.3.lst.$::todo::Wtomorow.9.tool.todos.todone cget -command
+} -result [list event generate $::todo::Pane.3.lst.$::todo::Wtomorow.9 <<ToDone>>]
+
+::tcltest::test ToDone {
+  change item done to 1 and datum to today
+} -output {} -body {
+  focus $::todo::Pane.3.lst.$::todo::Wtomorow.9.entry
+  update
+  ::todo::ToDone $::todo::Pane.3.lst.$::todo::Wtomorow.9
+  update
+  list \
+    [winfo exists $::todo::Pane.3.lst.$::todo::Wtomorow.9] \
+    [SQLCMD eval {SELECT done,datum,rang FROM todos WHERE rowid=9}] \
+    [focus -lastfor .]
+} -result [list 0 [list 1 $::todo::today 1] $::todo::Pane.6.lst.$::todo::Wtoday.9.entry]
+
+
+::tcltest::test ToDatum.1 {
+  change item datum from calendar widget
+} -output {} -body {
+  ::todo::ToDatum $::todo::Pane.1.lst.20190508.2 2030-10-16
+  update
+  list \
+    [winfo exists $::todo::Pane.1.lst.20190508.2] \
+    [winfo exists $::todo::Pane.1.lst.20190508] \
+    [winfo manager $::todo::Pane.1.lst] \
+    [winfo exists $::todo::Pane.5.lst.20301016] \
+    [winfo exists $::todo::Pane.5.lst.20301016.2] \
+    [SQLCMD eval {SELECT datum,rang FROM todos WHERE rowid=2}] \
+    [focus -lastfor .]
+} -result [list 0 0 {} 1 1 {2030-10-16 1} $::todo::Pane.5.lst.20301016.2.entry]
+
+::tcltest::test ToDatum.2 {
+  change item datum from calendar widget section done set done to 0
+} -output {} -body {
+  todo::ToDatum $::todo::Pane.6.lst.$::todo::Wtoday.9 $::todo::today
+  update
+  list \
+    [winfo exists $::todo::Pane.6.lst.$::todo::Wtoday.9] \
+    [winfo exists $::todo::Pane.2.lst.$::todo::Wtoday.9] \
+    [SQLCMD eval {SELECT done,datum,rang FROM todos WHERE rowid=9}] \
+    [focus -lastfor .]
+} -result [list 0 1 [list 0 $::todo::today 3] $::todo::Pane.2.lst.$::todo::Wtoday.9.entry]
+
+
+::tcltest::test CALDatum.cmd {
+  calendar Ok Cancel buttons callback
+} -output {} -body {
+  list \
+    [dict get $::calendar::config(.11.calendar) -cmd] \
+  [dict get $::calendar::config($::todo::Pane.5.lst.20301016.2.tool.calendar) -cmd]
+} -result {::todo::CALDatum ::todo::CALDatum}
+
+
+::tcltest::test CALDatum.1 {
+  from insert
+} -output {} -body {
+  ::todo::CALDatum .11.calendar 1999-03-16
+  update
+  winfo exists $::todo::Pane.1.lst.19990316.11
+} -result 1
+
+::tcltest::test CALDatum.2 {
+  from widget
+} -output {} -body {
+  ::todo::CALDatum \
+    $::todo::Pane.1.lst.19990316.11.tool.calendar 1999-04-16
+  update
+  list \
+    [focus -lastfor .] \
+    [winfo exists $::todo::Pane.1.lst.19990316] \
+    [SQLCMD eval {SELECT done,datum,rang FROM todos WHERE rowid=11}]
+} -result [list $::todo::Pane.1.lst.19990416.11.entry 0 {0 1999-04-16 1}]
+
+::tcltest::test CALDatum.3 {
+  with datum as empty string do nothing just return
+} -output {} -body {
+  ::todo::CALDatum $::todo::Pane.5.calendar.insert {}
+  focus -lastfor .
+} -result "$::todo::Pane.1.lst.19990416.11.entry"
+
+
+::tcltest::test bind.shiftdown {} -body {
+  list [bind Wentry <Shift-Key-Down>] [bind Entry <Shift-Key-Down>]
+} -result {{ event generate [winfo parent %W] <<MoveDn>> } {}}
+::tcltest::test MoveDn.event {
+  from wentry
+} -output {} -body {
+  bind Todo <<MoveDn>>
+} -result {::namespace inscope ::todo {MoveDn %W}}
+::tcltest::test MoveDn.button {} -output {} -body {
+  $::todo::Pane.4.lst.00000000.5.tool.buttons.movedn cget -command
+} -result [list event generate $::todo::Pane.4.lst.00000000.5 <<MoveDn>>]
+
+::tcltest::test MoveDn {
+  move item one rang down in same rang-datum
+} -output {} -body {
+  focus $::todo::Pane.4.lst.00000000.3.entry
+  update
+  ::todo::MoveDn $::todo::Pane.4.lst.00000000.3
+  update
+  list \
+    [pack slaves $::todo::Pane.4.lst.00000000] \
+    [SQLCMD eval {SELECT rowid,rang FROM todos WHERE rowid IN (3,5)}] \
+    [focus -lastfor .]
+} -result [list "$::todo::Pane.4.lst.00000000.5 $::todo::Pane.4.lst.00000000.3" {3 2 5 1} $::todo::Pane.4.lst.00000000.3.entry]
+
+::tcltest::test bind.shiftup {} -body {
+  list [bind Wentry <Shift-Key-Up>] [bind Entry <Shift-Key-Up>]
+} -result {{ event generate [winfo parent %W] <<MoveUp>> } {}}
+::tcltest::test MoveUp.event {
+  from wentry
+} -output {} -body {
+  bind Todo <<MoveUp>>
+} -result {::namespace inscope ::todo {MoveUp %W}}
+::tcltest::test MoveUp.button {} -output {} -body {
+  $::todo::Pane.4.lst.00000000.5.tool.buttons.moveup cget -command
+} -result [list event generate $::todo::Pane.4.lst.00000000.5 <<MoveUp>>]
+
+::tcltest::test MoveUp {
+  move item one rang up in same rang-datum
+} -output {} -body {
+  focus $::todo::Pane.4.lst.00000000.3.entry
+  update
+  ::todo::MoveUp $::todo::Pane.4.lst.00000000.3
+  update
+  list \
+    [pack slaves $::todo::Pane.4.lst.00000000] \
+    [SQLCMD eval {SELECT rowid,rang FROM todos WHERE rowid IN (3,5)}] \
+    [focus -lastfor .]
+} -result [list "$::todo::Pane.4.lst.00000000.3 $::todo::Pane.4.lst.00000000.5" {3 1 5 2} $::todo::Pane.4.lst.00000000.3.entry]
+
+
+::tcltest::test MoveUp.x {
+  dont move first in range
+} -output {} -body {
+  focus $::todo::Pane.4.lst.00000000.3.entry
+  update
+  ::todo::MoveUp $::todo::Pane.4.lst.00000000.3
+  update
+  list \
+    [pack slaves $::todo::Pane.4.lst.00000000] \
+    [focus -lastfor .]
+} -result [list [list $::todo::Pane.4.lst.00000000.3 $::todo::Pane.4.lst.00000000.5] $::todo::Pane.4.lst.00000000.3.entry]
+
+::tcltest::test MoveDn.x {
+  dont move last in range
+} -output {} -body {
+  focus $::todo::Pane.4.lst.00000000.5.entry
+  update
+  ::todo::MoveDn $::todo::Pane.4.lst.00000000.5
+  update
+  list \
+    [pack slaves $::todo::Pane.4.lst.00000000] \
+    [focus -lastfor .]
+} -result [list [list $::todo::Pane.4.lst.00000000.3 $::todo::Pane.4.lst.00000000.5] $::todo::Pane.4.lst.00000000.5.entry]
+
+
+
+::tcltest::wait_until_ 0
+SQLCMD close
+::tcltest::cleanupTests
+

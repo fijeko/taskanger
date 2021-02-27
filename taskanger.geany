@@ -1,0 +1,56 @@
+[editor]
+line_wrapping=true
+line_break_column=80
+auto_continue_multiline=true
+
+[file_prefs]
+final_new_line=true
+ensure_convert_new_lines=false
+strip_trailing_spaces=false
+replace_tabs=true
+
+[indentation]
+indent_width=2
+indent_type=0
+indent_hard_tab_width=8
+detect_indent=false
+detect_indent_width=false
+indent_mode=2
+
+[project]
+name=taskanger
+base_path=/home/fijeko/Projekti/taskanger/
+description=
+file_patterns=
+
+[long line marker]
+long_line_behaviour=1
+long_line_column=80
+
+[files]
+current_page=6
+FILE_NAME_0=24;None;0;EUTF-8;0;1;1;%2Fhome%2Ffijeko%2FProjekti%2Ftaskanger%2F.gitignore;0;2
+FILE_NAME_1=0;None;0;EUTF-8;0;1;1;%2Fhome%2Ffijeko%2FProjekti%2Ftaskanger%2Fnotes%2FTODO;0;2
+FILE_NAME_2=1974;None;0;EUTF-8;0;1;1;%2Fhome%2Ffijeko%2FProjekti%2Fgtihub_remainder;0;2
+FILE_NAME_3=778;Tcl;0;EUTF-8;0;1;1;%2Fhome%2Ffijeko%2FProjekti%2Ftaskanger%2Ftest%2Fall.tcl;0;2
+FILE_NAME_4=4439;Tcl;0;EUTF-8;0;1;1;%2Fhome%2Ffijeko%2FProjekti%2Ftaskanger%2Fapp%2Fdomain%2Fdomain.tcl;0;2
+FILE_NAME_5=1260;Tcl;0;EUTF-8;0;1;1;%2Fhome%2Ffijeko%2FProjekti%2Ftaskanger%2Fapp%2Fwrap_taskanger.tcl;0;2
+FILE_NAME_6=1426;Tcl;0;EUTF-8;0;1;1;%2Fhome%2Ffijeko%2FProjekti%2Ftaskanger%2Fapp%2Ftaskanger.tcl;0;2
+
+[VTE]
+last_dir=/home/fijeko/Projekti/taskanger
+
+[build-menu]
+TclFT_00_LB=_Compile
+TclFT_00_CM=tclsh test/all.tcl
+TclFT_00_WD=%p
+filetypes=Tcl;
+EX_00_LB=_Execute
+EX_00_CM=wrap/fwx app/taskanger.tcl &
+EX_00_WD=%p
+TclFT_02_LB=
+TclFT_02_CM=
+TclFT_02_WD=
+NF_00_LB=Make _All
+NF_00_CM=tclsh wrap/wrapper.tcl
+NF_00_WD=%p

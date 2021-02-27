@@ -1,0 +1,559 @@
+package require tcltest 2
+
+::tcltest::loadTestedCommands
+
+source [file join $::TSKNGR_APPDIR task.tcl]
+
+
+::tcltest::test draw {
+  'static' frames
+} -body {
+  wm geometry . +1000+50
+  dict set ::gi::WinMng minsize {800 800}
+  
+  grid [frame .2]
+  grid [frame .21]
+  pack [frame .2.0] [frame .2.0.scroll]
+  
+  ::task::draw .21 .2.0.scroll
+  .21.insert cget -command
+} -result {::namespace inscope ::task InsertMain}
+
+::tcltest::test load {
+  data from database and draw items
+} -output {} -setup {
+  ::domain::Connect ":memory:"
+  ::domain::insertTask 0 1 {}
+  ::domain::insertTask 0 2 {}
+  ::domain::insertTask 0 3 {}
+  ::domain::insertTask 1 1 {}
+  ::domain::insertTask 1 2 {}
+  ::domain::insertTask 3 1 {}
+  ::domain::insertTask 6 1 {}
+  ::domain::insertTask 7 1 {}
+  ::domain::updateTask 1 task1
+  ::domain::updateTask 2 task2
+  ::domain::updateTask 3 task3
+  ::domain::updateTask 4 task4
+  ::domain::updateTask 5 task5
+  ::domain::updateTask 6 task6
+  ::domain::updateTask 7 task7
+  ::domain::updateTask 8 task8
+} -body {
+  ::task::load [::domain::TaskLista]
+  expr {
+    [winfo exists $::task::Pane.lst.1] +
+    [winfo exists $::task::Pane.lst.1.lst.4] +
+    [winfo exists $::task::Pane.lst.1.lst.5] +
+    [winfo exists $::task::Pane.lst.2] +
+    [winfo exists $::task::Pane.lst.3] +
+    [winfo exists $::task::Pane.lst.3.lst.6] +
+    [winfo exists $::task::Pane.lst.3.lst.6.lst.7] +
+    [winfo exists $::task::Pane.lst.3.lst.6.lst.7.lst.8]}
+} -result {8}
+
+::tcltest::test GetRowid {
+} -output {} -body {
+  list \
+    [::task::GetRowid $::task::Pane.lst.3] \
+    [::task::GetRowid $::task::Pane.lst.3.lst.6] \
+    [::task::GetRowid $::task::Pane.lst.3.lst.6.lst.7] \
+    [::task::GetRowid $::task::Pane.lst.3.lst.6.lst.7.lst.8]
+} -result {3 6 7 8}
+
+::tcltest::test GetRangSet {
+} -output {} -body {
+  list \
+    [::task::GetRangSet $::task::Pane.lst.1.lst.5] \
+    [::task::GetRangSet $::task::Pane.lst.3.lst.6]
+} -result [list [list $::task::Pane.lst.1.lst.4 $::task::Pane.lst.1.lst.5]  $::task::Pane.lst.3.lst.6]
+
+::tcltest::test GetRang {
+  for search in windgets
+} -output {} -body {
+  list \
+    [::task::GetRang $::task::Pane.lst.3.lst.6.lst.7] \
+    [::task::GetRang $::task::Pane.lst.1.lst.4] \
+    [::task::GetRang $::task::Pane.lst.1.lst.5]
+} -result {0 0 1}
+
+::tcltest::test GetMaxRang {
+} -output {} -body {
+  list \
+    [::task::GetMaxRang $::task::Pane.lst] \
+    [::task::GetMaxRang $::task::Pane.lst.1.lst] \
+    [::task::GetMaxRang $::task::Pane.lst.3.lst.6.lst.7.lst]
+} -result {4 3 2}
+
+::tcltest::test SetItemWdg {
+} -output {} -body {
+  list \
+    [::task::SetItemWdg {} 5]    \
+    [::task::SetItemWdg {5} 6]   \
+    [::task::SetItemWdg {5 6} 9]
+} -result [list $::task::Pane.lst.5 $::task::Pane.lst.5.lst.6 $::task::Pane.lst.5.lst.6.lst.9]
+
+::tcltest::test GetParentId {
+  for save in domain
+} -output {} -body {
+  list \
+    [::task::GetParentId $::task::Pane.lst.3.lst.6.lst.7.lst.8] \
+    [::task::GetParentId $::task::Pane.lst.3]
+} -result {7 0}
+
+::tcltest::test GetParentWdg {
+  for levelup/down
+} -output {} -body {
+  list \
+    [::task::GetParentWdg $::task::Pane.lst.3.lst.6.lst.7.lst.8] \
+    [::task::GetParentWdg $::task::Pane.lst.3]
+} -result [list $::task::Pane.lst.3.lst.6.lst.7 {}]
+
+::tcltest::test GetNewFocus {
+  after delete widget
+} -output {} -body {
+  list \
+    [::task::GetNewFocus $::task::Pane.lst.1.lst.4] \
+    [::task::GetNewFocus $::task::Pane.lst.1.lst.5]
+} -result "$::task::Pane.lst.1.lst.5 $::task::Pane.lst.1.lst.4"
+
+::tcltest::test GetDepth {
+  = in three - number of lst of wdg from window path string
+} -output {} -body {
+  list \
+    [::task::GetDepth $::task::Pane.lst.1.lst.2.lst.3] \
+    [::task::GetDepth $::task::Pane.lst.1.lst.2] \
+    [::task::GetDepth $::task::Pane.lst.1]
+} -result {3 2 1}
+
+
+::tcltest::test Walk {
+  = list of all windows for tab and shifttab
+} -cleanup {
+  pack forget .2.0.scroll.lst.1.tool
+} -output {} -body {
+  pack .2.0.scroll.lst.1.tool
+  ::task::Walk
+} -result [list $::task::Pane.lst.1.tool.buttons.close $::task::Pane.lst.1.tool.buttons.escape $::task::Pane.lst.1.tool.buttons.update $::task::Pane.lst.1.tool.buttons.delete $::task::Pane.lst.1.tool.buttons.moveup $::task::Pane.lst.1.tool.buttons.movedn $::task::Pane.lst.1.tool.tasks.insert $::task::Pane.lst.1.tool.tasks.inschild $::task::Pane.lst.1.tool.tasks.levelup $::task::Pane.lst.1.tool.tasks.leveldn $::task::Pane.lst.1.entry $::task::Pane.lst.1.lst.4.entry $::task::Pane.lst.1.lst.5.entry $::task::Pane.lst.2.entry $::task::Pane.lst.3.entry $::task::Pane.lst.3.lst.6.entry $::task::Pane.lst.3.lst.6.lst.7.entry $::task::Pane.lst.3.lst.6.lst.7.lst.8.entry $::task::PaneIns.insert]
+
+
+::tcltest::test Save.event {
+  from wentry ctrl-s or enter or update button
+} -body {
+  bind Task <<Save>>
+} -result {::namespace inscope ::task {Save %W %d}}
+
+::tcltest::test Save {
+  update value in database
+} -output {} -cleanup {
+  ::task::Save $::task::Pane.lst.1 task1
+} -body {
+  ::task::Save $::task::Pane.lst.1 tmptxt
+  SQLCMD eval {SELECT task FROM tasks WHERE rowid=1}
+} -result {tmptxt}
+
+
+::tcltest::test Insert.button {
+  main insert button 
+} -output {} -body {
+  .21.insert cget -command
+} -result {::namespace inscope ::task InsertMain}
+
+::tcltest::test InsertMain {
+  inert new task
+} -output {}  -cleanup {
+  $::task::Pane.lst.9.entry insert 0 task9
+} -body {
+  focus .
+  update
+  ::task::InsertMain
+  update
+  list \
+    [focus -lastfor .] \
+    [SQLCMD eval {SELECT id,parent,rang FROM tasks WHERE rowid=9}]
+} -result [list $::task::Pane.lst.9.entry {9 0 4}]
+
+
+::tcltest::test bind.insert {
+  list [bind Wentry <Insert>] [bind Entry <Insert>]
+}
+::tcltest::test Insert.button {
+  insert button in entry tools
+} -body {
+  $::task::Pane.lst.1.lst.5.tool.tasks.insert cget -command
+} -result [list event generate $::task::Pane.lst.1.lst.5 <<Insert>>]
+::tcltest::test Insert.event {
+  from wentry ctrl Ins
+} -body {
+  bind Task <<Insert>>
+} -result {::namespace inscope ::task {Insert %W}}
+
+::tcltest::test Insert.1 {
+  insert wentry after wdg
+} -output {} -cleanup {
+  $::task::Pane.lst.1.lst.10.entry insert 1 task10
+} -body {
+  focus $::task::Pane.lst.1.lst.5.entry
+  update
+  ::task::Insert $::task::Pane.lst.1.lst.5
+  update
+  list \
+    [focus -lastfor .] \
+    [SQLCMD eval {SELECT id,parent,rang FROM tasks WHERE parent=1 ORDER BY rang}] \
+    [pack slaves $::task::Pane.lst.1.lst] \
+    [dict get [pack info $::task::Pane.lst.1.lst.10.entry] -padx]
+} -result [list $::task::Pane.lst.1.lst.10.entry {4 1 1 5 1 2 10 1 3} [list $::task::Pane.lst.1.lst.4 $::task::Pane.lst.1.lst.5 $::task::Pane.lst.1.lst.10] {10 0}]
+
+::tcltest::test Insert.2 {
+  insert wentry after wdg
+} -cleanup {
+  $::task::Pane.lst.1.lst.11.entry insert 0 task11
+} -output {} -body {
+  focus $::task::Pane.lst.1.lst.4.entry
+  update
+  ::task::Insert $::task::Pane.lst.1.lst.4
+  update
+  list \
+    [focus -lastfor .] \
+    [SQLCMD eval {SELECT id,parent,rang FROM tasks WHERE parent=1 ORDER BY rang}] \
+    [pack slaves $::task::Pane.lst.1.lst] \
+    [dict get [pack info $::task::Pane.lst.1.lst.11.entry] -padx]
+} -result [list $::task::Pane.lst.1.lst.11.entry {4 1 1 11 1 2 5 1 3 10 1 4} [list $::task::Pane.lst.1.lst.4 $::task::Pane.lst.1.lst.11 $::task::Pane.lst.1.lst.5 $::task::Pane.lst.1.lst.10] {10 0}]
+
+::tcltest::test Insert.3 {
+} -cleanup {
+  $::task::Pane.lst.3.lst.6.lst.12.entry insert 0 task12
+} -output {} -body {
+  focus $::task::Pane.lst.3.lst.6.lst.7.entry
+  update
+  ::task::Insert $::task::Pane.lst.3.lst.6.lst.7
+  update
+  list \
+    [focus -lastfor .] \
+    [SQLCMD eval {SELECT id,parent,rang FROM tasks WHERE parent=6 ORDER BY rang}] \
+    [pack slaves $::task::Pane.lst.3.lst.6.lst] \
+    [dict get [pack info $::task::Pane.lst.3.lst.6.lst.7.entry] -padx]
+} -result [list $::task::Pane.lst.3.lst.6.lst.12.entry {7 6 1 12 6 2} [list $::task::Pane.lst.3.lst.6.lst.7 $::task::Pane.lst.3.lst.6.lst.12] {20 0}]
+
+
+::tcltest::test bind.ctrlI {
+  events on Wentry
+} -body {
+  if {[bind Wentry <Control-i>] eq [bind Wentry <Control-I>]} {
+    list [bind Wentry <Control-i>] [bind Entry <Control-i>]
+  } else {
+    concat missing or wrong bindings
+  }
+} -result {{ event generate [winfo parent %W] <<InsChild>> } {}}
+::tcltest::test InsChild.button {
+  insert button in entry tools
+} -body {
+  $::task::Pane.lst.9.tool.tasks.inschild cget -command
+} -result [list event generate $::task::Pane.lst.9 <<InsChild>>]
+::tcltest::test InsChild.event {
+  events on Wentry
+} -body {
+  bind Task <<InsChild>>
+} -result {::namespace inscope ::task {InsertChild %W}}
+
+::tcltest::test InsertChild.1 {
+} -cleanup {
+  $::task::Pane.lst.1.lst.11.lst.13.entry insert 0 task13
+} -output {} -body {
+  focus $::task::Pane.lst.1.lst.11.entry 
+  update
+  ::task::InsertChild $::task::Pane.lst.1.lst.11
+  update
+  list \
+    [focus -lastfor .] \
+    [SQLCMD eval {SELECT id,parent,rang FROM tasks WHERE parent=11 ORDER BY rang}] \
+    [pack slaves $::task::Pane.lst.1.lst.11.lst] \
+    [dict get [pack info $::task::Pane.lst.1.lst.11.lst.13.entry] -padx]
+} -result [list $::task::Pane.lst.1.lst.11.lst.13.entry {13 11 1} $::task::Pane.lst.1.lst.11.lst.13 {20 0}]
+
+::tcltest::test InsertChild.2 {
+} -cleanup {
+  $::task::Pane.lst.2.lst.14.entry insert 0 task14
+} -output {} -body {
+  focus $::task::Pane.lst.2.entry 
+  update
+  ::task::InsertChild $::task::Pane.lst.2
+  update
+  list \
+    [focus -lastfor .] \
+    [SQLCMD eval {SELECT id,parent,rang FROM tasks WHERE parent=2 ORDER BY rang}] \
+    [pack slaves $::task::Pane.lst.2.lst] \
+    [dict get [pack info $::task::Pane.lst.2.lst.14.entry] -padx]
+} -result [list $::task::Pane.lst.2.lst.14.entry {14 2 1} $::task::Pane.lst.2.lst.14 {10 0}]
+
+::tcltest::test InsertChild.3 {
+} -cleanup {
+  $::task::Pane.lst.3.lst.15.entry insert 0 task15
+} -output {} -body {
+  focus $::task::Pane.lst.3.entry 
+  update
+  ::task::InsertChild $::task::Pane.lst.3
+  update
+  list [focus -lastfor .] \
+    [SQLCMD eval {SELECT id,parent,rang FROM tasks WHERE parent=3 ORDER BY rang}] \
+    [pack slaves $::task::Pane.lst.3.lst] \
+    [dict get [pack info $::task::Pane.lst.3.lst.15.entry] -padx]
+} -result [list $::task::Pane.lst.3.lst.15.entry {6 3 1 15 3 2} [list $::task::Pane.lst.3.lst.6 $::task::Pane.lst.3.lst.15] {10 0}]
+
+
+::tcltest::test bind.shiftdown {} -body {
+  list [bind Wentry <Shift-Key-Down>] [bind Entry <Shift-Key-Down>]
+} -result {{ event generate [winfo parent %W] <<MoveDn>> } {}}
+::tcltest::test MoveDn.event {
+  events on Task
+} -output {} -body {
+  bind Task <<MoveDn>>
+} -result {::namespace inscope ::task {MoveDn %W}}
+::tcltest::test Movedn.button {} -output {} -body {
+  $::task::Pane.lst.1.lst.4.tool.buttons.movedn cget -command
+} -result [list event generate $::task::Pane.lst.1.lst.4 <<MoveDn>>]
+
+::tcltest::test MoveDn.1 {
+  move item one place down in rang
+} -output {} -body {
+  focus $::task::Pane.lst.1.entry
+  update
+  ::task::MoveDn $::task::Pane.lst.1
+  update
+  list \
+    [focus -lastfor .] \
+    [SQLCMD eval {SELECT id,rang FROM tasks WHERE parent=0 ORDER BY rang}]
+} -result [list $::task::Pane.lst.1.entry {2 1 1 2 3 3 9 4}]
+
+::tcltest::test MoveDn.2 {
+  move item one place down in rang
+} -output {} -body {
+  focus $::task::Pane.lst.9.entry
+  update
+  ::task::MoveDn $::task::Pane.lst.9
+  update
+  list \
+    [focus -lastfor .] \
+    [SQLCMD eval {SELECT id,rang FROM tasks WHERE parent=0 ORDER BY rang}]
+} -result [list $::task::Pane.lst.9.entry {2 1 1 2 3 3 9 4}]
+
+
+::tcltest::test bind.shiftup {} -body {
+  list [bind Wentry <Shift-Key-Up>] [bind Entry <Shift-Key-Up>]
+} -result {{ event generate [winfo parent %W] <<MoveUp>> } {}}
+::tcltest::test MoveUp.event {
+  events on Task
+} -body {
+  bind Task <<MoveUp>>
+} -result {::namespace inscope ::task {MoveUp %W}}
+::tcltest::test MoveUp.button {} -output {} -body {
+  $::task::Pane.lst.9.tool.buttons.moveup cget -command
+} -result [list event generate $::task::Pane.lst.9 <<MoveUp>>]
+
+::tcltest::test MoveUp.1 {
+  move item one place up in rang
+} -output {} -body {
+  focus $::task::Pane.lst.1.entry
+  update
+  ::task::MoveUp $::task::Pane.lst.1
+  update
+  list \
+    [focus -lastfor .] \
+    [SQLCMD eval {SELECT id,rang FROM tasks WHERE parent=0 ORDER BY rang}]
+} -result [list $::task::Pane.lst.1.entry {1 1 2 2 3 3 9 4}]
+
+::tcltest::test MoveUp.2 {
+  move item one place up in rang
+} -output {} -body {
+  focus $::task::Pane.lst.1.entry
+  update
+  ::task::MoveUp $::task::Pane.lst.1
+  update
+  list \
+    [focus -lastfor .] \
+    [SQLCMD eval {SELECT id,rang FROM tasks WHERE parent=0 ORDER BY rang}]
+} -result [list $::task::Pane.lst.1.entry {1 1 2 2 3 3 9 4}]
+
+
+::tcltest::test WdgTree {
+} -body {
+  list \
+    [::task::WdgTree $::task::Pane.lst.1] \
+    [::task::WdgTree $::task::Pane.lst.3] \
+    [::task::WdgTree $::task::Pane.lst.9]
+} -result [list [list $::task::Pane.lst.1 task1 $::task::Pane.lst.1.lst.4 task4 $::task::Pane.lst.1.lst.11 task11 $::task::Pane.lst.1.lst.11.lst.13 task13 $::task::Pane.lst.1.lst.5 task5 $::task::Pane.lst.1.lst.10 task10] [list $::task::Pane.lst.3 task3 $::task::Pane.lst.3.lst.6 task6 $::task::Pane.lst.3.lst.6.lst.7 task7 $::task::Pane.lst.3.lst.6.lst.7.lst.8 task8 $::task::Pane.lst.3.lst.6.lst.12 task12 $::task::Pane.lst.3.lst.15 task15] [list $::task::Pane.lst.9 task9]]
+
+
+::tcltest::test bind.shiftright {} -body {
+  list [bind Wentry <Shift-Key-Right>] [bind Entry <Shift-Key-Right>]
+} -result {{event generate [winfo parent %W] <<LevelDn>>;break} {}}
+::tcltest::test LevelDn.event {
+  events on Task 
+} -body {
+  bind Task <<LevelDn>>
+} -result {::namespace inscope ::task {LevelDn %W}}
+::tcltest::test LevelDn.wentry_bind {
+  bind on Wentry shift-right
+} -body {
+  bind Wentry <Shift-Right>
+} -result {event generate [winfo parent %W] <<LevelDn>>;break}
+::tcltest::test LevelDn.button {} -output {} -body {
+  $::task::Pane.lst.9.tool.tasks.leveldn cget -command
+} -result [list event generate $::task::Pane.lst.9 <<LevelDn>>]
+
+::tcltest::test LevelDn.1 {
+  move item and its children level dn as child of its previous sybling
+} -output {} -body {
+  focus $::task::Pane.lst.1.lst.5.entry
+  update
+  ::task::LevelDn $::task::Pane.lst.1.lst.5
+  update
+  list [focus -lastfor .] \
+    [SQLCMD eval {SELECT id,parent,rang FROM tasks WHERE id IN (5,10)}] \
+    [dict get [pack info $::task::Pane.lst.1.lst.11.lst.5.entry] -padx]
+} -result [list $::task::Pane.lst.1.lst.11.lst.5.entry {5 11 2 10 1 3} {20 0}]
+
+::tcltest::test LevelDn.2 {
+  move item and its children level dn as child of its previous sybling
+} -output {} -body {
+  focus $::task::Pane.lst.1.lst.11.entry
+  update
+  ::task::LevelDn $::task::Pane.lst.1.lst.11
+  update
+  list [focus -lastfor .] \
+    [SQLCMD eval {SELECT id,parent,rang FROM tasks WHERE id IN (5,10,11,13)}] \
+    [dict get [pack info $::task::Pane.lst.1.lst.4.lst.11.entry] -padx] \
+    [dict get [pack info $::task::Pane.lst.1.lst.4.lst.11.lst.13.entry] -padx] \
+    [dict get [pack info $::task::Pane.lst.1.lst.4.lst.11.lst.5.entry] -padx]
+} -result [list $::task::Pane.lst.1.lst.4.lst.11.entry {5 11 2 10 1 2 11 4 1 13 11 1} {20 0} {30 0} {30 0}]
+
+::tcltest::test LevelDn.3 {
+  move item and its children level dn as child of its previous sybling
+} -output {} -body {
+  focus $::task::Pane.lst.1.lst.4.entry
+  update
+  ::task::LevelDn $::task::Pane.lst.1.lst.4
+  list [focus -lastfor .] \
+    [SQLCMD eval {SELECT id,parent,rang FROM tasks WHERE id=4}]
+} -result [list $::task::Pane.lst.1.lst.4.entry {4 1 1}]
+
+
+::tcltest::test bind.shiftleft {} -body {
+  list [bind Wentry <Shift-Key-Left>] [bind Entry <Shift-Key-Left>]
+} -result {{event generate [winfo parent %W] <<LevelUp>>;break} {}}
+::tcltest::test LevelUp.event {
+  events on Task 
+} -body {
+  bind Task <<LevelUp>>
+} -result {::namespace inscope ::task {LevelUp %W}}
+::tcltest::test LevelUp.wentry_bind {
+  bind on Wentry shift-left
+} -body {
+  bind Wentry <Shift-Left>
+} -result {event generate [winfo parent %W] <<LevelUp>>;break}
+::tcltest::test LevelUp.button {} -output {} -body {
+  $::task::Pane.lst.9.tool.tasks.levelup cget -command
+} -result [list event generate $::task::Pane.lst.9 <<LevelUp>>]
+
+::tcltest::test LevelUp.1 {
+  move item and its children level up as next sybling of its previous parent
+} -output {} -body {
+  focus $::task::Pane.lst.3.entry
+  update
+  ::task::LevelUp $::task::Pane.lst.3
+  update
+  list [focus -lastfor .] \
+    [SQLCMD eval {SELECT id,parent,rang FROM tasks WHERE id IN (3)}]
+} -result [list $::task::Pane.lst.3.entry {3 0 3}]
+
+::tcltest::test LevelUp.2 {
+  move item and its children level up as next sybling of its previous parent
+} -output {} -body {
+  focus $::task::Pane.lst.3.lst.6.lst.7.entry
+  update
+  ::task::LevelUp $::task::Pane.lst.3.lst.6.lst.7
+  update
+  list [focus -lastfor .] \
+    [SQLCMD eval {SELECT id,parent,rang FROM tasks WHERE id IN (7,8,12,15)}] \
+    [dict get [pack info $::task::Pane.lst.3.lst.7.entry] -padx] \
+    [dict get [pack info $::task::Pane.lst.3.lst.7.lst.8.entry] -padx]
+} -result [list $::task::Pane.lst.3.lst.7.entry {7 3 2 8 7 1 12 6 1 15 3 3} {10 0} {20 0}]
+
+::tcltest::test LevelUp.3 {
+  move item and its children level dn as child of its previous sybling
+} -output {} -body {
+  focus $::task::Pane.lst.3.lst.15.entry
+  update
+  ::task::LevelUp $::task::Pane.lst.3.lst.15
+  update
+  list [focus -lastfor .] \
+    [SQLCMD eval {SELECT id,parent,rang FROM tasks WHERE id IN (3,15)}] \
+    [dict get [pack info $::task::Pane.lst.15.entry] -padx]
+} -result [list $::task::Pane.lst.15.entry {3 0 3 15 0 4} 0]
+
+
+::tcltest::test bind.shiftdelete {} -body {
+  list [bind Wentry <Shift-Delete>] [bind Entry <Shift-Delete>]
+} -result {{ event generate [winfo parent %W] <<Delete>> } {}}
+::tcltest::test Delete.button {} -output {} -body {
+  $::task::Pane.lst.9.tool.buttons.delete cget -command
+} -result [list event generate $::task::Pane.lst.9 <<Delete>>]
+::tcltest::test Delete.event {
+  from wentry
+} -output {} -body {
+  bind Task <<Delete>>
+} -result {::namespace inscope ::task {Delete %W}}
+
+::tcltest::test Delete.1 {
+} -output {} -body {
+  focus $::task::Pane.lst.9.entry
+  update
+  ::task::Delete $::task::Pane.lst.9
+  update
+  list \
+    [focus -lastfor .] \
+    [winfo exists $::task::Pane.lst.9] \
+    [SQLCMD eval {SELECT id FROM tasks WHERE id = 9}]
+} -result [list $::task::Pane.lst.15.entry 0 {}]
+
+::tcltest::test Delete.2 {
+} -output {} -body {
+  focus $::task::Pane.lst.2.lst.14.entry
+  update
+  ::task::Delete $::task::Pane.lst.2.lst.14
+  update
+  list \
+    [focus -lastfor .] \
+    [winfo exists $::task::Pane.lst.2.lst.14] \
+    [winfo manager $::task::Pane.lst.2.lst] \
+    [SQLCMD eval {SELECT id,parent,rang FROM tasks WHERE id IN (14)}]
+} -result [list $::task::Pane.lst.2.entry 0 {} {}]
+
+::tcltest::test Delete.3 {
+} -output {} -body {
+  focus $::task::Pane.lst.1.lst.4.lst.11.lst.13.entry
+  update
+  ::task::Delete $::task::Pane.lst.1.lst.4.lst.11.lst.13
+  update
+  list \
+    [focus -lastfor .] \
+    [winfo exists $::task::Pane.lst.1.lst.4.lst.11.lst.13] \
+    [winfo manager $::task::Pane.lst.1.lst.4.lst.11.lst] \
+    [SQLCMD eval {SELECT id,parent,rang FROM tasks WHERE id IN (5,13)}]
+} -result [list $::task::Pane.lst.1.lst.4.lst.11.lst.5.entry 0 pack {5 11 1}]
+
+
+::tcltest::test opentools {
+} -output {} -body {
+  bind all <Map> "+puts maps_%W"
+  bind all <Map>
+  ::wentry::PackTool $::task::Pane.lst.1.lst.4.lst.11
+}
+
+::tcltest::wait_until_ 0
+SQLCMD close
+::tcltest::cleanupTests
+
+
+
+

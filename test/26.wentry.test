@@ -1,0 +1,460 @@
+package require tcltest 2
+
+::tcltest::loadTestedCommands
+
+package require wentry 1.0
+
+
+::tcltest::test frames {
+} -body {
+  wm geometry . +1300+150
+  pack [frame .1]
+  pack [frame .1.lst]
+} -result {}
+
+::tcltest::test draw.1 {
+  new wentry widget
+} -output {} -body {
+  ::wentry::draw .1.lst.1 {wdg 1} true
+  list  \
+    [winfo exists  .1.lst.1.entry] \
+    [winfo exists  .1.lst.1.tool] \
+    [winfo manager .1.lst.1.tool] \
+    [winfo exists  .1.lst.1.tool.buttons.close] \
+    [winfo exists  .1.lst.1.tool.buttons.escape] \
+    [winfo exists  .1.lst.1.tool.buttons.update] \
+    [bindtags .1.lst.1.entry]
+} -result {1 1 {} 1 1 1 {Wentry .1.lst.1.entry Entry . all}}
+
+::tcltest::test draw.2 {
+  = draw to show
+} -output {} -body {
+  ::wentry::draw .1.lst.2 {wdg 2} true
+  ::wentry::draw .1.lst.3 {wdg 3} false
+  ::wentry::packWentry .1.lst.3 -after  .1.lst.1
+  
+  pack slaves .1.lst
+} -result {.1.lst.1 .1.lst.3 .1.lst.2}
+
+
+::tcltest::test toolButton {
+  = create buton  
+} -output {} -body {  
+  ::wentry::toolButton .1.lst.1 delete {-event Delete}
+  list \
+    [.1.lst.1.tool.buttons.delete cget -command] \
+    [pack slaves .1.lst.1.tool.buttons]
+} -result {{event generate .1.lst.1 <<Delete>>} {.1.lst.1.tool.buttons.close .1.lst.1.tool.buttons.escape .1.lst.1.tool.buttons.update .1.lst.1.tool.buttons.delete}}
+
+::tcltest::test PackTool.1 {
+  = open tools
+} -output {} -body {
+  ::wentry::PackTool .1.lst.1
+  winfo manager .1.lst.1.tool
+} -result pack
+::tcltest::test PackTool.2 {
+  = tools was open, do nothing
+} -output {} -body {
+  ::wentry::PackTool .1.lst.1
+  winfo manager .1.lst.1.tool
+} -result pack
+::tcltest::test ForgetTool.1 {
+  = tools was open, do nothing
+} -output {} -body {
+  ::wentry::ForgetTool .1.lst.1
+  winfo manager .1.lst.1.tool
+} -result {}
+
+
+::tcltest::test calendarWidget {
+  = construct calendar widget
+} -output {} -body {
+  ::wentry::calendarWidget .1.lst.1 2007-05-11 {}
+  update
+  list \
+    [winfo manager .1.lst.1.tool] \
+    [winfo exists .1.lst.1.tool.calendar] \
+    [winfo class .1.lst.1.tool.calendar.ctool.centry] \
+    [.1.lst.1.tool.calendar.ctool.centry get]
+} -result {{} 1 Entry 2007-05-11}
+
+
+::tcltest::test articleWidget {
+  = construct writter widget and its toggle button in tools
+} -output {} -body { 
+  ::wentry::articleWidget .1.lst.3 {{article with tags marks wins} {} {} {}}
+  list \
+    [winfo exists .1.lst.3.tool.buttons.article] \
+    [.1.lst.3.tool.buttons.article cget -command] \
+    [winfo exists .1.lst.3.article] \
+    [winfo manager .1.lst.3.article] \
+    [winfo class .1.lst.3.article.txt]
+} -result {1 {::wentry::ToggleArticle .1.lst.3.entry} 1 {} Text}
+
+
+::tcltest::test listWidget {
+  = frame that will hold 'children wentry'
+} -output {} -body {
+  ::wentry::listWidget .1.lst.2
+  winfo exists .1.lst.2.lst
+} -result 1
+
+
+::tcltest::test padWidget {
+  pad before entry for tree view
+} -output {} -body {
+  update
+  ::wentry::padWidget .1.lst.2 1
+  ::wentry::draw .1.lst.2.lst.4 {wdg 4} true
+  ::wentry::packList .1.lst.2
+  update
+  ::wentry::padWidget .1.lst.2.lst.4 2
+  update
+  list \
+    [dict get [pack info .1.lst.2.entry] -padx] \
+    [dict get [pack info .1.lst.2.lst.4.entry] -padx]
+} -result {{10 0} {20 0}}
+
+
+::tcltest::test inFocus.1 {
+  = set focus on entry in widget
+} -output {} -body {
+  ::wentry::inFocus .1.lst.1
+  list \
+    [focus -lastfor .] \
+    [winfo manager .1.lst.1.tool]
+} -result {.1.lst.1.entry {}}
+
+::tcltest::test inFocus.2 {
+  = when wdg is empty string set focus on .
+} -output {} -body {
+  ::wentry::inFocus {}
+  focus -lastfor .
+} -result {.}
+
+
+::tcltest::test bind.focusout {} -body {
+  list [bind Wentry <FocusOut>] [bind Entry <FocusOut>] 
+} -result {{::namespace inscope ::wentry {FocusOut %W}} {}}
+::tcltest::test bind.focusin {} -body {
+  list [bind Wentry <FocusIn>] [bind Entry <FocusIn>] 
+} -result {{::namespace inscope ::wentry {FocusIn %W}} {}}
+::tcltest::test bind.button1 {} -body {
+  list [bind Wentry <Button-1>] [expr {[bind Entry <Button-1>] ne {}}]
+} -result {{} 1}
+
+::tcltest::test FocusIn.1 {
+  = change state to normal, set wentry variable, 
+  verticaly center widget not tested here
+} -output {} -body {
+  ::wentry::FocusIn .1.lst.1.entry
+  update
+  list \
+    [.1.lst.1.entry cget -state] \
+    [winfo manager .1.lst.1.tool] \
+    [.1.lst.1.entry cget -textvariable] \
+    $::wentry::ItemValue $::wentry::EntryValue
+} -result {normal {} ::wentry::EntryValue {wdg 1} {wdg 1}}
+
+::tcltest::test FocusOut.1 {
+  change state to readonly, empty variable
+} -output {} -body {
+  ::wentry::FocusOut .1.lst.1.entry
+  update
+  list \
+    [.1.lst.1.entry cget -state] \
+    [winfo manager .1.lst.1.tool] \
+    [.1.lst.1.entry cget -textvariable] \
+    $::wentry::ItemValue $::wentry::EntryValue
+} -result {readonly {} {} {} {}}
+
+::tcltest::test FocusOut.2 {
+  when tools where opened, change state to readonly, empty variable
+} -output {} -body {
+  focus .1.lst.1.entry
+  update
+  pack .1.lst.1.tool -fill x -side top -before .1.lst.1.entry
+  update
+  ::wentry::FocusOut .1.lst.1.entry
+  update
+  list \
+    [.1.lst.1.entry cget -state] \
+    [winfo manager .1.lst.1.tool] \
+    [.1.lst.1.entry cget -textvariable] \
+    $::wentry::ItemValue $::wentry::EntryValue
+} -result {readonly pack {} {} {}}
+
+::tcltest::test FocusIn.2 {
+  when tools was already opened 
+} -output {} -body {
+  ::wentry::FocusIn .1.lst.1.entry
+  update
+  list \
+    [.1.lst.1.entry cget -state] \
+    [winfo manager .1.lst.1.tool] \
+    [.1.lst.1.entry cget -textvariable] \
+    $::wentry::ItemValue $::wentry::EntryValue
+} -result {normal pack ::wentry::EntryValue {wdg 1} {wdg 1}}
+
+::tcltest::test FocusOut.3 {
+  = if Entry text was changed, generate <<Save>> event on wdg, 
+} -output {.1.lst.1 blablabla} -setup {
+  bind .1.lst.1 <<Save>> {puts -nonewline "%W %d"}
+  set ::wentry::EntryValue "blablabla"
+} -cleanup {
+  bind .1.lst.1 <<Save>> {}
+} -body {
+  ::wentry::FocusOut .1.lst.1.entry
+  update
+  list \
+    [.1.lst.1.entry get] \
+    [.1.lst.1.entry cget -state] \
+    [winfo manager .1.lst.1.tool] \
+    $::wentry::ItemValue $::wentry::EntryValue
+} -result {blablabla readonly pack {} {}}
+
+
+::tcltest::test bind.button3 {} -body {
+  list [bind Wentry <Button-3>] [bind Entry <Button-3>]
+} -result {{::namespace inscope ::wentry {ToggleTool %W true}} {}}
+::tcltest::test bind.alt-b {} -body {
+  if {[bind Wentry <Alt-Key-b>] eq [bind Wentry <Alt-Key-B>]} {
+    list [bind Wentry <Alt-Key-b>] [bind Entry <Alt-Key-b>]
+  } else {
+    concat missing or wrong bindings
+  }
+} -result {{::namespace inscope ::wentry {ToggleTool %W}} {}}
+::tcltest::test close.button {} -body {
+  .1.lst.1.tool.buttons.close cget -command
+} -result {::wentry::ToggleTool .1.lst.1.entry}
+
+::tcltest::test ToggleTool.1 {
+  closed tool can be open with alt-b when focus is in window
+} -output {} -body {
+  pack forget .1.lst.1.tool
+  update
+  focus .1.lst.1.entry
+  update
+  ::wentry::ToggleTool .1.lst.1.entry
+  update
+  list [focus -lastfor .] \
+    [.1.lst.1.entry cget -state] \
+    [winfo manager .1.lst.1.tool]
+} -result {.1.lst.1.entry readonly pack}
+
+::tcltest::test ToggleTool.2 {
+  opened tool can be closed with alt-b or button
+} -output {} -body {
+  ::wentry::ToggleTool .1.lst.1.entry
+  list [focus -lastfor .] \
+    [winfo manager .1.lst.1.tool]
+} -result {.1.lst.1.entry {}}
+
+::tcltest::test ToggleTool.3 {
+  when right click on Entry without focus, Entry got focus, plus open tool 
+  right mouse event set parameter withfocus to true 
+} -output {} -body {
+  ::wentry::ToggleTool .1.lst.2.entry true
+  list [focus -lastfor .] \
+    [winfo manager .1.lst.2.tool]
+} -result {.1.lst.2.entry pack}
+
+::tcltest::test ToggleTool.4 {
+  when right click on focused Entry, and tool is already opened do nothign 
+  right mouse event set parameter withfocus to true 
+} -output {} -body {
+  ::wentry::ToggleTool .1.lst.2.entry true
+  list [focus -lastfor .] \
+    [winfo manager .1.lst.2.tool]
+} -result {.1.lst.2.entry pack}
+
+::tcltest::test ToggleTool.5 {
+  when right click on focused Entry, and tool is closed, open tool 
+  right mouse event set parameter withfocus to true 
+} -output {} -body {
+  ::wentry::ToggleTool .1.lst.2.entry
+  update
+  ::wentry::ToggleTool .1.lst.2.entry true
+  list [focus -lastfor .] \
+    [winfo manager .1.lst.2.tool]
+} -result {.1.lst.2.entry pack}
+
+
+::tcltest::test bindEntry.alt-t {} -body {
+  if {[bind Wentry <Alt-Key-t>] eq [bind Wentry <Alt-Key-T>]} {
+    list [bind Wentry <Alt-Key-t>] [bind Entry <Alt-Key-t>]
+  } else {
+    concat missing or wrong bindings
+  }
+} -result {{::namespace inscope ::wentry {ToggleArticle %W}} {}}
+::tcltest::test bindArticle.alt-t {} -body {
+  if {[bind Writter <Alt-Key-t>] eq [bind Writter <Alt-Key-T>]} {
+    bind Writter <Alt-Key-t>
+  } else {
+    concat missing or wrong bindings
+  }
+} -result {::namespace inscope ::wentry {ToggleArticle %W}}
+::tcltest::test article.button {} -body {
+  .1.lst.3.tool.buttons.article cget -command
+} -result {::wentry::ToggleArticle .1.lst.3.entry}
+
+::tcltest::test ToggleArticle.1 {
+  open pop with proc
+} -output {} -body {
+  ::wentry::ToggleArticle .1.lst.3.entry
+  update
+  list \
+    [pack slaves .1.lst.3] \
+    [focus -lastfor .]
+} -result {{.1.lst.3.tool .1.lst.3.entry .1.lst.3.article} .1.lst.3.article.txt}
+
+::tcltest::test ToggleArticle.2 {
+  close article widget set focus on entry so save article
+} -output {.1.lst.3 {article with tags marks wins} {MARKER {} UNDERL {}} {insert 1.28} {}} -setup {
+  bind .1.lst.3 <<SaveArticle>> {puts -nonewline "%W %d"}
+  namespace eval ::wstatus {variable error "some error"}
+} -cleanup {
+  bind .1.lst.3 <<SaveArticle>> {}
+  namespace delete ::wstatus
+} -body {
+  ::wentry::ToggleArticle .1.lst.3.entry
+  update
+  list \
+    [pack slaves .1.lst.3] \
+    [focus -lastfor .] \
+    [set ::wstatus::error]
+} -result {{.1.lst.3.tool .1.lst.3.entry} .1.lst.3.entry {}}
+
+::tcltest::test ToggleArticle.3 {
+  when alt-t in article
+} -output {.1.lst.3 {article with tags marks wins} {MARKER {} UNDERL {}} {insert 1.28} {}} -setup {
+  bind .1.lst.3 <<SaveArticle>> {puts -nonewline "%W %d"}
+  namespace eval ::wstatus {variable error "some error"}
+} -cleanup {
+  bind .1.lst.3 <<SaveArticle>> {}
+  namespace delete ::wstatus
+} -body {
+  ::wentry::ToggleArticle .1.lst.3.entry
+  update
+  ::wentry::ToggleArticle .1.lst.3.article.txt
+  update
+  list \
+    [pack slaves .1.lst.3] \
+    [focus -lastfor .] \
+    [set ::wstatus::error]
+} -result {{.1.lst.3.tool .1.lst.3.entry} .1.lst.3.entry {}}
+
+
+::tcltest::test bind.escape {} -body {
+  list [bind Wentry <Key-Escape>] [bind Entry <Key-Escape>]
+} -result "{::namespace inscope ::wentry {Escape %W}} {# nothing}"
+::tcltest::test button.escape {} -body {
+  .1.lst.1.tool.buttons.escape cget -command
+} -result {::wentry::Escape .1.lst.1.entry}
+
+::tcltest::test Escape.1 {
+  check focus and values
+} -output {} -body {
+  focus .1.lst.3.entry
+  update
+  .1.lst.3.entry insert end " haha"
+  update
+  ::wentry::Escape .1.lst.3.entry
+  update
+  list $::wentry::ItemValue $::wentry::EntryValue \
+    [focus -lastfor .] \
+    [.1.lst.3.entry cget -textvariable] \
+    [.1.lst.3.entry get]
+} -result {{} {} . {} {wdg 3}}
+
+
+::tcltest::test bind.enter {} -body {
+  if {[bind Wentry <Key-KP_Enter>] eq [bind Wentry <Key-Return>] &&
+    [bind Wentry <Key-Return>] eq [bind Wentry <Control-Key-s>] &&
+    [bind Wentry <Control-Key-s>] eq [bind Wentry <Control-Key-S>]} {
+      bind Wentry <Control-Key-s>
+  } else {
+    concat missing or wrong bindings
+  }
+} -result {::namespace inscope ::wentry {Update %W}}
+::tcltest::test button.update {} -body {
+  .1.lst.1.tool.buttons.update cget -command
+} -result {::wentry::Update .1.lst.1.entry}
+
+::tcltest::test Update {
+  = set focus on ., that cause FocusOut that save-update value
+} -output {} -body {
+  focus .1.lst.3.entry
+  update
+  set ::wentry::EntryValue [concat $::wentry::EntryValue " hahha"]
+  update
+  ::wentry::Update .1.lst.3.entry
+  update
+  list [focus -lastfor .] \
+    [.1.lst.3.entry get]
+} -result {. {wdg 3 hahha}}
+
+
+::tcltest::test UpdateToggleCalendarCmd {
+} -output {} -body {
+  ::wentry::draw .1.lst.7 val7 true
+  ::wentry::calendarWidget .1.lst.7 2009-05-11 {}
+  .1.lst.7.tool.calendar.ctool.tgl cget -command
+} -result {::calendar::Toggle .1.lst.7.tool.calendar
+      focus .1.lst.7.entry}
+
+::tcltest::test InvokeCalendarCmd {
+} -output {} -body {
+  ::wentry::ToggleTool .1.lst.7.entry
+  update
+  .1.lst.7.tool.calendar.ctool.tgl invoke
+  update
+  list [winfo manager .1.lst.7.tool.calendar.cwdg] [focus -lastfor .]
+} -result {pack .1.lst.7.entry}
+
+::tcltest::test CloseCalendarPopOnFocusOut {
+  dont close, let user close and open widgets
+} -output {} -body {
+  focus .
+  update
+  winfo manager .1.lst.7.tool.calendar.cwdg
+} -result pack
+
+
+::tcltest::test walk.1 {
+  all widget for tab and shift tab
+} -output {} -body {
+  ::wentry::walk .1.lst.1
+} -result {.1.lst.1.entry}
+
+::tcltest::test walk.2 {
+  all widget for tab and shift tab
+} -output {} -body {
+  ::wentry::ToggleArticle .1.lst.3.entry
+  ::wentry::walk .1.lst.3
+} -result {.1.lst.3.tool.buttons.close .1.lst.3.tool.buttons.escape .1.lst.3.tool.buttons.update .1.lst.3.tool.buttons.article .1.lst.3.entry .1.lst.3.article.tool.save .1.lst.3.article.tool.mark .1.lst.3.article.tool.undr .1.lst.3.article.tool.none .1.lst.3.article.tool.link .1.lst.3.article.tool.close .1.lst.3.article.txt}
+
+::tcltest::test walk.3 {
+  all widget for tab and shift tab
+} -output {} -body {
+  ::wentry::walk .1.lst.2
+} -result {.1.lst.2.tool.buttons.close .1.lst.2.tool.buttons.escape .1.lst.2.tool.buttons.update .1.lst.2.entry}
+
+::tcltest::test walk.4 {
+  all widget for tab and shift tab
+} -output {} -body {
+  ::wentry::walk .1.lst.7
+} -result {.1.lst.7.tool.buttons.close .1.lst.7.tool.buttons.escape .1.lst.7.tool.buttons.update .1.lst.7.tool.calendar.ctool.tgl .1.lst.7.tool.calendar.ctool.centry .1.lst.7.tool.calendar.ctool.ok .1.lst.7.tool.calendar.ctool.esc .1.lst.7.entry}
+
+
+
+
+
+
+
+::tcltest::wait_until_ 0
+::tcltest::cleanupTests
+
+
+
+

@@ -1,0 +1,8 @@
+run this test form projekt root dir
+
+$ tclsh test/all.tcl
+
+test only some files (any part of name)
+
+$ tclsh test/all.tcl  20 calendar tod
+will test 20.gi.test 22.calendar.test 30.todo.test

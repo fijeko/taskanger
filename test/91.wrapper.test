@@ -1,0 +1,27 @@
+package require tcltest 2
+
+::tcltest::loadTestedCommands
+
+source [file join $::TSKNGR_WORKDIR wrap wrapper.tcl]
+
+::tcltest::test CreateList {
+} -output {} -body {
+  ::wrapper::CreateList app wrap_taskanger.tcl taskanger.tcl wrap fileslist
+} -result {wrap/fileslist app/wrap_taskanger.tcl}
+
+::tcltest::test CheckFreewrap {
+} -output {} -body {
+  ::wrapper::CheckFreewrap wrap freewrap taskanger
+} -result {wrap/freewrap wrap/freewrap.exe wrap/taskanger wrap/taskanger.exe}
+
+::tcltest::test Setup {
+} -output {} -body {
+  ::wrapper::Setup
+} -result {wrap/freewrap wrap/freewrap.exe wrap/taskanger wrap/taskanger.exe wrap/fileslist app/wrap_taskanger.tcl - true}
+
+::tcltest::test wrapper {
+} -output {} -body {
+  ::wrapper::wrapper
+}
+::tcltest::cleanupTests
+

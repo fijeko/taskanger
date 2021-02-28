@@ -8,6 +8,7 @@ package require help 1.0
 ::tcltest::test open.1 {
    in toplevel window
 } -output {} -body {
+  bind all <Map> { ::gi::geometry %W }
   ::help::open
   list \
     [winfo exists .help] \

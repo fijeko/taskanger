@@ -4,18 +4,49 @@ package require gi      1.0
 package require wscroll 1.0
 package require help    1.0
 
+if {$::tcl_platform(platform) eq "windows"} {
+  package require Winico 0.6
+  set ::TSKNGR_ICO [winico createfrom \
+    [file join $::TSKNGR_APPDIR icons appp.ico]]
+} else {
+  set ::TSKNGR_ICO [image create photo \
+    -file [file join $::TSKNGR_APPDIR icons appp.png]]
+}
+
 source [file join $::TSKNGR_APPDIR todo.tcl]
 source [file join $::TSKNGR_APPDIR task.tcl]
 source [file join $::TSKNGR_APPDIR thema.tcl]
 
 namespace eval ::frames {
-  bind . <Control-Q> [namespace code {ExitApp}]
-  bind . <Control-q> [namespace code {ExitApp}]
+  bind . <Control-Q> {
+    focus .
+    update
+    destroy .
+  }
+  bind . <Control-q> {
+    focus .
+    update
+    destroy .
+  }
   bind all <<PrevWindow>> [namespace code { ::frames::Walk %W prev }]
   bind all <<NextWindow>> [namespace code { ::frames::Walk %W next }]
   
-  wm protocol . WM_DELETE_WINDOW [namespace code {ExitApp}]
-  wm iconphoto . -default $::gi::ICO(placeholder)
+  bind all <Map> { 
+    ::gi::geometry %W; 
+    if {"%W" eq "."} {
+      if {$::tcl_platform(platform) eq "windows"} {
+        winico setwindow . $::TSKNGR_ICO 
+      } else {
+        wm iconphoto . -default $::TSKNGR_ICO 
+      }
+      bind . <Map> {}
+    }
+  }
+  wm protocol . WM_DELETE_WINDOW {
+    focus .
+    update
+    destroy .
+  }
 }
 
 proc ::frames::run {dbname} {
@@ -75,16 +106,4 @@ proc ::frames::Walk {wdg direction} {
 #~ puts "$index [lindex $walkSet $index]"
   focus [lindex $walkSet $index]
 }
-
-
-# on window manager frame x button or menu exit
-# or control-q event
-proc ::frames::ExitApp {} {
-  focus .
-  update
-  destroy .
-}
-
-
-
 

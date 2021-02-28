@@ -5,12 +5,8 @@ package require tcltest 2
 package require calendar 1.0
 
 ::tcltest::test frames {} -body {
-  dict set ::gi::WinMng geometry +1600+50
-  dict set ::gi::WinMng minsize {350 800}
+  bind . <Map> { ::gi::geometry %W; }
   
-  #~ pack [frame .0 -background yellow] -expand 1 -fill y 
-  #~ pack [frame .0.1] -fill x
-  #~ frame .0.2
   pack [frame .0]
   pack [frame .0.1]
   frame .0.2

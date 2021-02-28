@@ -8,8 +8,8 @@ source [file join $::TSKNGR_APPDIR task.tcl]
 ::tcltest::test draw {
   'static' frames
 } -body {
-  wm geometry . +1000+50
-  dict set ::gi::WinMng minsize {800 800}
+  bind . <Map> { ::gi::geometry %W }
+  wm geometry . +1000+80
   
   grid [frame .2]
   grid [frame .21]

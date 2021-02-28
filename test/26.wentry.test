@@ -7,6 +7,7 @@ package require wentry 1.0
 
 ::tcltest::test frames {
 } -body {
+  bind . <Map> { ::gi::geometry %W }
   wm geometry . +1300+150
   pack [frame .1]
   pack [frame .1.lst]

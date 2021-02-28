@@ -20,8 +20,10 @@ source [file join $::TSKNGR_WORKDIR wrap wrapper.tcl]
 } -result {wrap/freewrap wrap/freewrap.exe wrap/taskanger wrap/taskanger.exe wrap/fileslist app/wrap_taskanger.tcl - true}
 
 ::tcltest::test wrapper {
-} -output {} -body {
+} -output {created: wrap/taskanger and wrap/taskanger.exe
+} -body {
   ::wrapper::wrapper
 }
+
 ::tcltest::cleanupTests
 

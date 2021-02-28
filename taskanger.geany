@@ -28,14 +28,11 @@ long_line_behaviour=1
 long_line_column=80
 
 [files]
-current_page=6
-FILE_NAME_0=24;None;0;EUTF-8;0;1;1;%2Fhome%2Ffijeko%2FProjekti%2Ftaskanger%2F.gitignore;0;2
-FILE_NAME_1=0;None;0;EUTF-8;0;1;1;%2Fhome%2Ffijeko%2FProjekti%2Ftaskanger%2Fnotes%2FTODO;0;2
-FILE_NAME_2=1974;None;0;EUTF-8;0;1;1;%2Fhome%2Ffijeko%2FProjekti%2Fgtihub_remainder;0;2
-FILE_NAME_3=778;Tcl;0;EUTF-8;0;1;1;%2Fhome%2Ffijeko%2FProjekti%2Ftaskanger%2Ftest%2Fall.tcl;0;2
-FILE_NAME_4=4439;Tcl;0;EUTF-8;0;1;1;%2Fhome%2Ffijeko%2FProjekti%2Ftaskanger%2Fapp%2Fdomain%2Fdomain.tcl;0;2
-FILE_NAME_5=1260;Tcl;0;EUTF-8;0;1;1;%2Fhome%2Ffijeko%2FProjekti%2Ftaskanger%2Fapp%2Fwrap_taskanger.tcl;0;2
-FILE_NAME_6=1426;Tcl;0;EUTF-8;0;1;1;%2Fhome%2Ffijeko%2FProjekti%2Ftaskanger%2Fapp%2Ftaskanger.tcl;0;2
+current_page=2
+FILE_NAME_0=1697;Tcl;0;EUTF-8;0;1;1;%2Fhome%2Ffijeko%2FProjekti%2Ftaskanger%2Fapp%2Fwritter%2Fwritter.tcl;0;2
+FILE_NAME_1=180;None;0;EUTF-8;0;1;1;%2Fhome%2Ffijeko%2FProjekti%2Ftaskanger%2Fnotes%2FTODO;0;2
+FILE_NAME_2=11316;Tcl;0;EUTF-8;0;1;1;%2Fhome%2Ffijeko%2FProjekti%2Ftaskanger%2Ftest%2F24.writter.test;0;2
+FILE_NAME_3=17364;Tcl;0;EUTF-8;0;1;1;%2Fhome%2Ffijeko%2FProjekti%2Ftaskanger%2Fapp%2Fgi%2Fgi.tcl;0;2
 
 [VTE]
 last_dir=/home/fijeko/Projekti/taskanger

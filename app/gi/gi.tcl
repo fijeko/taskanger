@@ -1,7 +1,7 @@
 package provide gi 1.0
 
-package require Tcl 8.6
-package require Tk  8.6
+package require Tcl    8.6
+package require Tk     8.6
 
 
 # color
@@ -40,9 +40,8 @@ namespace eval ::gi {
   
   proc create_icons {} {
     variable ICO
+
     foreach {iname fname} {
-      placeholder placeholder.png
-      - - 
       insert    add_new.png    
       close     close.png      
       ok        check.png      
@@ -97,6 +96,10 @@ namespace eval ::gi {
   set TodoSections(4)  "uvik"
   set TodoSections(5)  "nekad"
   set TodoSections(6)  "gotovo"
+  
+  set LBL(laddress) "adresa"
+  set LBL(ltitle)   "naslov"
+  
   
   set LBL(missurl)  "poveznica je nepravilna ili ne postoji"
   set LBL(misswww)  "ne mogu otvorit browser"
@@ -318,12 +321,8 @@ namespace eval ::gi {
   lappend OPTIONS *cbtnm.text   $LBL(nextM)
   lappend OPTIONS *cbtny.image  $ICO(ny)    
   lappend OPTIONS *cbtny.text   $LBL(nextY)
-}
 
-namespace eval ::gi {
-  
-  bind all <Map> { ::gi::geometry %W; }
-  
+
   foreach {pattern value} $OPTIONS {
     option add $pattern $value
   }
@@ -508,7 +507,7 @@ namespace eval ::gi {
 # writter
   dict set Geometry -fill   linktool x 
   dict set Geometry -expand linktool 1 
-  dict set Geometry -padx   linktool 1 
+  dict set Geometry -padx   linktool 6 
   dict set Geometry -pady   linktool 1 
   
   dict set Geometry -side   address  top

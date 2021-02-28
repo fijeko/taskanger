@@ -9,11 +9,13 @@ package require wentry 1.0
 
 ::tcltest::test frames {
 } -output {} -body {
+  bind . <Map> { ::gi::geometry %W }
   wm geometry . +1300+150
   pack [frame .1 -width 300 -height 900] -padx 4
   pack propagate .1 false
   
   ::wscroll::draw .1.0
+  update
   
   list \
     [winfo exists .1.0.scroll] \
@@ -112,7 +114,7 @@ package require wentry 1.0
   dict get [place info .1.0.scroll] -y
 } -result 0
 
-::tcltest::wait_until_ 0
+::tcltest::wait_until_  0
 ::tcltest::cleanupTests
 
 

@@ -33,7 +33,7 @@ namespace eval wscroll {
     bind . <MouseWheel> {::wscroll::Scroll %W [expr {-(%D)}]}
     bind . <Option-MouseWheel> {::wscroll::Scroll %W [expr {-10 *(%D)}]}
   } else {
-    bind . <MouseWheel> {::wscroll::Scroll %W 
+    bind . <MouseWheel> {::wscroll::Scroll %W \
                   [expr {%D>=0 ? (-%D/120) : ((119-%D)/120)}]}
   }
   

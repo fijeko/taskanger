@@ -22,10 +22,8 @@ source [file join $::TSKNGR_APPDIR frames.tcl]
 ::tcltest::test frames.draw {
   all 'static' widgets
 } -output {} -body {
-  dict set ::gi::Style -background .1 red 
-  dict set ::gi::Style -background .2 green
-  dict set ::gi::Style -background .3 blue
-  wm geometry . 1200x700+909+212
+  bind . <Map> { ::gi::geometry %W }
+  wm geometry . +1200+700
   ::frames::draw
   update
   list \

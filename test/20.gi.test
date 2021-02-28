@@ -7,7 +7,7 @@ package require gi 1.0
 ::tcltest::test icons.created {
 } -output {} -body {
   llength [image names]
-} -result {35}
+} -result {34}
 
 ::tcltest::test setdictionary {
 } -output {} -body {
@@ -33,7 +33,12 @@ package require gi 1.0
   }
 
   grid [frame .f] [frame .g]
-
+  bind all <Map> { 
+    ::gi::geometry %W; 
+    if {"%W" eq "."} {
+      bind . <Map> {}
+    }
+  }
 }
 
 ::tcltest::test list {
